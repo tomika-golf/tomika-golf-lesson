@@ -1,0 +1,28 @@
+# 依存関係
+node_modules/
+
+# ビルド成果物
+dist/
+build/
+.next/
+.nuxt/
+
+# 環境変数（セキュリティのため）
+.env*
+
+# キャッシュとログ
+*.log
+.npm/
+.eslintcache
+
+# 画像
+*.png
+*.jpg
+*.bmp
+
+# データベース
+*.db
+
+# OS固有のファイル
+.DS_Store
+Thumbs.db
