@@ -21,39 +21,50 @@ export function useAuth() {
       try {
         const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
         if (!liffId) {
-          throw new Error("NEXT_PUBLIC_LIFF_ID が設定されていません。");
+          throw new Error("【設定エラー】LIFF_ID が設定されていません。");
         }
 
-        // 1. LIFFの初期化
-        await liff.init({ liffId });
+        // ステップ1: LIFFの初期化
+        try {
+          await liff.init({ liffId });
+        } catch (initErr: any) {
+          throw new Error(`【ステップ1】LIFF初期化エラー: ${initErr.message}`);
+        }
 
         if (!liff.isLoggedIn()) {
-          // LIFFブラウザ外（通常のSafariやChrome）の場合はLINEログイン画面へ飛ばす
-          // ログイン後に元のページ（/booking や /mypage）に戻ってくるように redirectUri を指定
+          // LIFFブラウザ外の場合はLINEログイン画面へ飛ばす
           liff.login({ redirectUri: window.location.href });
           return;
         }
 
-        // 2. LINEプロフィールの取得
-        const liffProfile = await liff.getProfile();
-        
-        // 3. OIDC (OpenID Connect) トークンの取得
-        const idToken = liff.getIDToken();
-        if (!idToken) {
-          throw new Error("LINEの認証トークンが取得できませんでした。");
+        // ステップ2: LINEプロフィールの取得
+        let liffProfile;
+        try {
+          liffProfile = await liff.getProfile();
+        } catch (profileErr: any) {
+          throw new Error(`【ステップ2】プロフィール取得エラー: ${profileErr.message}`);
         }
 
-        // 4. Supabaseへのログイン（自動ユーザー登録も含む）
-        const supabase = createClient();
-        const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
-          provider: 'line',
-          token: idToken,
-        });
+        // ステップ3: IDトークンの取得
+        const idToken = liff.getIDToken();
+        if (!idToken) {
+          throw new Error("【ステップ3】IDトークンが取得できませんでした。LIFFの設定でopenidスコープが有効か確認してください。");
+        }
 
-        if (authError) {
-          console.error("Supabase Auth Error:", authError);
-          // ※ Supabase側でLINE連携設定が終わっていない場合はここでエラーになります
-          throw new Error("データベース連携設定が未完了です。");
+        // ステップ4: Supabaseへのログイン
+        const supabase = createClient();
+        let authData;
+        try {
+          const result = await supabase.auth.signInWithIdToken({
+            provider: 'line',
+            token: idToken,
+          });
+          if (result.error) {
+            throw result.error;
+          }
+          authData = result.data;
+        } catch (supaErr: any) {
+          throw new Error(`【ステップ4】Supabase認証エラー: ${supaErr.message || JSON.stringify(supaErr)}`);
         }
 
         setProfile({
@@ -63,16 +74,20 @@ export function useAuth() {
           supabaseUserId: authData.user?.id,
         });
 
-        // カスタムAPIへリクエストを送り、プロフィールテーブルの作成・更新を行う（名前の保存など）
-        await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lineId: liffProfile.userId,
-            displayName: liffProfile.displayName,
-            supabaseUserId: authData.user?.id,
-          }),
-        });
+        // ステップ5: プロフィール同期
+        try {
+          await fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              lineId: liffProfile.userId,
+              displayName: liffProfile.displayName,
+              supabaseUserId: authData.user?.id,
+            }),
+          });
+        } catch (syncErr: any) {
+          console.error("プロフィール同期エラー（致命的ではない）:", syncErr);
+        }
 
       } catch (err: any) {
         console.error("Auth Init Error:", err);
@@ -87,3 +102,4 @@ export function useAuth() {
 
   return { isReady, profile, error };
 }
+

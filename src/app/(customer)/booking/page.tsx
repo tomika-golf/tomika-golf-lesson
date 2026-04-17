@@ -142,7 +142,8 @@ export default function BookingPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 p-8">
         <p className="text-2xl">⚠️</p>
         <p className="font-bold text-gray-700 text-center">ログインに失敗しました</p>
-        <p className="text-sm text-gray-500 text-center">LINEアプリからアクセスしてください。</p>
+        <p className="text-xs text-red-500 text-center bg-red-50 p-3 rounded-lg max-w-sm break-all">{authError}</p>
+        <p className="text-sm text-gray-500 text-center mt-2">LINEアプリからアクセスしてください。</p>
       </div>
     );
   }
