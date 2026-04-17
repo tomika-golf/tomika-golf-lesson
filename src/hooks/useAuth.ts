@@ -29,7 +29,8 @@ export function useAuth() {
 
         if (!liff.isLoggedIn()) {
           // LIFFブラウザ外（通常のSafariやChrome）の場合はLINEログイン画面へ飛ばす
-          liff.login();
+          // ログイン後に元のページ（/booking や /mypage）に戻ってくるように redirectUri を指定
+          liff.login({ redirectUri: window.location.href });
           return;
         }
 
