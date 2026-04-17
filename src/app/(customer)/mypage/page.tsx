@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 type Profile = {
   name: string;
@@ -18,6 +19,7 @@ type Reservation = {
 };
 
 export default function MyPage() {
+  const { isReady, profile: lineProfile, error: authError } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,11 @@ export default function MyPage() {
     }
   };
 
+  // LINEログインが完了した後にプロフィールを取得する
   useEffect(() => {
+    if (!isReady) return; // 認証が完了するまで待機
     fetchProfile();
-  }, []);
+  }, [isReady]);
 
   const handleCancel = async (reservation: Reservation) => {
     if (!window.confirm("この予約をキャンセルしますか？\n（キャンセル期限は開始の3時間前までです）")) {
@@ -64,6 +68,27 @@ export default function MyPage() {
       alert("通信エラーが発生しました。");
     }
   };
+
+  // 認証中はローディング表示
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm">LINE認証中です...</p>
+      </div>
+    );
+  }
+
+  // 認証エラー
+  if (authError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 p-8">
+        <p className="text-2xl">⚠️</p>
+        <p className="font-bold text-gray-700 text-center">ログインに失敗しました</p>
+        <p className="text-sm text-gray-500 text-center">LINEアプリからアクセスしてください。</p>
+      </div>
+    );
+  }
 
   if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>;
   if (!profile) return <div className="p-8 text-center text-red-500">情報の取得に失敗しました。</div>;
