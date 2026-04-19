@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type AdminReservation = {
   id: string;
@@ -21,8 +22,14 @@ type AdminReservation = {
 };
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/dashboard/login");
+  };
 
   const fetchReservations = async () => {
     try {
@@ -77,9 +84,11 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50 pb-20">
       <header className="bg-gray-800 text-white px-6 py-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-xl font-bold">管理者ダッシュボード</h1>
-        <div className="space-x-3 text-sm">
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href="/dashboard/customers" className="bg-blue-600 px-3 py-2 rounded shadow">📋 カルテ管理</Link>
           <Link href="/dashboard/ghost-account" className="bg-gray-600 px-3 py-2 rounded">👻 ゴースト作成</Link>
           <Link href="/booking" className="bg-brand px-3 py-2 rounded shadow">📅 強制予約</Link>
+          <button onClick={handleLogout} className="bg-red-700 px-3 py-2 rounded">ログアウト</button>
         </div>
       </header>
 
