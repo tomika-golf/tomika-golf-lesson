@@ -59,18 +59,26 @@ export function useAuth() {
           throw new Error("【ステップ3】IDトークンが取得できませんでした。LIFFの設定でopenidスコープが有効か確認してください。");
         }
 
-        // ステップ4: Supabaseへのログイン
+        // ステップ4: サーバー経由でSupabaseセッションを作成
+        // （signInWithIdTokenのLINE OIDC設定不要な独自方式）
         const supabase = createClient();
         let authData;
         try {
-          const result = await supabase.auth.signInWithIdToken({
-            provider: 'line',
-            token: idToken,
+          const res = await fetch('/api/auth/line-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lineId: liffProfile.userId,
+              displayName: liffProfile.displayName,
+            }),
           });
-          if (result.error) {
-            throw result.error;
+          const json = await res.json();
+          if (!res.ok || !json.session) {
+            throw new Error(json.error || 'セッション取得失敗');
           }
-          authData = result.data;
+          const { error: setErr } = await supabase.auth.setSession(json.session);
+          if (setErr) throw setErr;
+          authData = { user: { id: json.userId } };
         } catch (supaErr: unknown) {
           const msg = supaErr instanceof Error ? supaErr.message : JSON.stringify(supaErr);
           throw new Error(`【ステップ4】Supabase認証エラー: ${msg}`);
