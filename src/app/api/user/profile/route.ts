@@ -1,31 +1,36 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export const revalidate = 0; // 常に最新データを取得する
+export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const admin = createAdminClient();
 
-    // ==========================================
-    // 開発用ダミー判定（本番ではエラーを返します）
-    // ==========================================
-    const userId = user?.id || '00000000-0000-0000-0000-000000000000';
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    // プロフィール情報（チケット残数等）を取得
-    const { data: profile, error: profileError } = await supabase
+    let userId: string | null = null;
+    if (token) {
+      const { data: { user } } = await admin.auth.getUser(token);
+      userId = user?.id ?? null;
+    }
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116: 行が見つからないエラー
+    if (profileError && profileError.code !== 'PGRST116') {
       throw profileError;
     }
 
-    // 予約履歴を取得（新しい順）
-    const { data: reservations, error: reservationsError } = await supabase
+    const { data: reservations, error: reservationsError } = await admin
       .from('reservations')
       .select('*')
       .eq('user_id', userId)
@@ -40,8 +45,9 @@ export async function GET() {
       profile: profile || { ticket_man_to_man: 0, ticket_group: 0, name: 'ゲスト' },
       reservations: reservations || [],
     });
-  } catch (error: any) {
-    console.error('User Dashboard Profile Error:', error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('User Dashboard Profile Error:', msg);
     return NextResponse.json({ success: false, error: '情報の取得に失敗しました' }, { status: 500 });
   }
 }

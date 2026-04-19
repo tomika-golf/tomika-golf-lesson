@@ -15,6 +15,7 @@ export function useAuth() {
   const [isReady, setIsReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     async function initAuth() {
@@ -78,6 +79,7 @@ export function useAuth() {
           }
           const { error: setErr } = await supabase.auth.setSession(json.session);
           if (setErr) throw setErr;
+          setAccessToken(json.session.access_token);
           authData = { user: { id: json.userId } };
         } catch (supaErr: unknown) {
           const msg = supaErr instanceof Error ? supaErr.message : JSON.stringify(supaErr);
@@ -118,5 +120,5 @@ export function useAuth() {
     initAuth();
   }, []);
 
-  return { isReady, profile, error };
+  return { isReady, profile, error, accessToken };
 }

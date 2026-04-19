@@ -19,14 +19,16 @@ type Reservation = {
 };
 
 export default function MyPage() {
-  const { isReady, profile: lineProfile, error: authError } = useAuth();
+  const { isReady, profile: lineProfile, error: authError, accessToken } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("/api/user/profile");
+      const headers: HeadersInit = {};
+      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+      const res = await fetch("/api/user/profile", { headers });
       const data = await res.json();
       if (data.success) {
         setProfile(data.profile);
@@ -41,9 +43,9 @@ export default function MyPage() {
 
   // LINEログインが完了した後にプロフィールを取得する
   useEffect(() => {
-    if (!isReady) return; // 認証が完了するまで待機
+    if (!isReady) return;
     fetchProfile();
-  }, [isReady]);
+  }, [isReady, accessToken]);
 
   const handleCancel = async (reservation: Reservation) => {
     if (!window.confirm("この予約をキャンセルしますか？\n（キャンセル期限は開始の3時間前までです）")) {
