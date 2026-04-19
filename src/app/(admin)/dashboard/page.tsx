@@ -87,7 +87,7 @@ export default function AdminDashboard() {
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href="/dashboard/customers" className="bg-blue-600 px-3 py-2 rounded shadow">📋 カルテ管理</Link>
           <Link href="/dashboard/ghost-account" className="bg-gray-600 px-3 py-2 rounded">👻 ゴースト作成</Link>
-          <Link href="/booking" className="bg-brand px-3 py-2 rounded shadow">📅 強制予約</Link>
+          <Link href="/dashboard/booking" className="bg-brand px-3 py-2 rounded shadow">📅 代理予約</Link>
           <button onClick={handleLogout} className="bg-red-700 px-3 py-2 rounded">ログアウト</button>
         </div>
       </header>
