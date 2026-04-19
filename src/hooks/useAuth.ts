@@ -1,21 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// フルバンドル (@line/liff) は初期化時に LINE の CDN から legacy extension スクリプトを
-// 動的読み込みする。この読み込みが失敗すると "Unable to load client features" になる。
-// core + 必要なプラグインのみを使う構成に切り替えることで CDN 依存を排除する。
-import liff from "@line/liff/core";
-import GetProfileModule from "@line/liff/get-profile";
-import GetIDTokenModule from "@line/liff/get-id-token";
-import IsLoggedInModule from "@line/liff/is-logged-in";
-import LoginModule from "@line/liff/login";
+import liff from "@line/liff";
 import { createClient } from "@/lib/supabase/client";
-
-// モジュールレベルで1度だけプラグイン登録
-liff.use(new GetProfileModule());
-liff.use(new GetIDTokenModule());
-liff.use(new IsLoggedInModule());
-liff.use(new LoginModule());
 
 export type UserProfile = {
   lineId: string;
@@ -38,11 +25,18 @@ export function useAuth() {
         }
 
         // ステップ1: LIFFの初期化
+        // "Unable to load client features" は古いLINEとの互換用CDNスクリプトの
+        // 読み込み失敗であり、認証（getProfile/getIDToken）自体には影響しない。
+        // このエラーは無視して続行する。それ以外のエラーは致命的として扱う。
         try {
           await liff.init({ liffId });
         } catch (initErr: unknown) {
           const msg = initErr instanceof Error ? initErr.message : String(initErr);
-          throw new Error(`【ステップ1】LIFF初期化エラー: ${msg}`);
+          if (msg.includes("Unable to load client features")) {
+            console.warn("LIFF: legacy extension の読み込みに失敗しましたが認証は続行します");
+          } else {
+            throw new Error(`【ステップ1】LIFF初期化エラー: ${msg}`);
+          }
         }
 
         if (!liff.isLoggedIn()) {
