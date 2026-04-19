@@ -25,14 +25,16 @@ export function useAuth() {
         }
 
         // ステップ1: LIFFの初期化
+        // withLoginOnExternalBrowser: true により、LINEアプリ外のブラウザでも
+        // 自動でLINEログインへリダイレクトする（"Unable to load client features"エラーを防ぐ）
         try {
-          await liff.init({ liffId });
+          await liff.init({ liffId, withLoginOnExternalBrowser: true });
         } catch (initErr: any) {
           throw new Error(`【ステップ1】LIFF初期化エラー: ${initErr.message}`);
         }
 
         if (!liff.isLoggedIn()) {
-          // LIFFブラウザ外の場合はLINEログイン画面へ飛ばす
+          // 念のため未ログインの場合もLINEログインへ飛ばす
           liff.login({ redirectUri: window.location.href });
           return;
         }
