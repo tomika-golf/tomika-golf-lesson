@@ -1,9 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
+import { LiffRedirectHandler } from "@/components/LiffRedirectHandler";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans">
+      {/* LINE認証後のリダイレクトを処理する（ユーザーには見えない） */}
+      <LiffRedirectHandler />
 
       {/* ========== ① ヒーロー ========== */}
       <section className="relative h-screen min-h-[600px] flex flex-col justify-end overflow-hidden">
