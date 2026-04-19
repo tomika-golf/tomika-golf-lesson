@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import liff from "@line/liff";
+// フルバンドル (@line/liff) は初期化時に LINE の CDN から legacy extension スクリプトを
+// 動的読み込みする。この読み込みが失敗すると "Unable to load client features" になる。
+// core + 必要なプラグインのみを使う構成に切り替えることで CDN 依存を排除する。
+import liff from "@line/liff/core";
+import GetProfileModule from "@line/liff/get-profile";
+import GetIDTokenModule from "@line/liff/get-id-token";
+import IsLoggedInModule from "@line/liff/is-logged-in";
+import LoginModule from "@line/liff/login";
 import { createClient } from "@/lib/supabase/client";
+
+// モジュールレベルで1度だけプラグイン登録
+liff.use(new GetProfileModule());
+liff.use(new GetIDTokenModule());
+liff.use(new IsLoggedInModule());
+liff.use(new LoginModule());
 
 export type UserProfile = {
   lineId: string;
@@ -25,16 +38,14 @@ export function useAuth() {
         }
 
         // ステップ1: LIFFの初期化
-        // withLoginOnExternalBrowser: true により、LINEアプリ外のブラウザでも
-        // 自動でLINEログインへリダイレクトする（"Unable to load client features"エラーを防ぐ）
         try {
-          await liff.init({ liffId, withLoginOnExternalBrowser: true });
-        } catch (initErr: any) {
-          throw new Error(`【ステップ1】LIFF初期化エラー: ${initErr.message}`);
+          await liff.init({ liffId });
+        } catch (initErr: unknown) {
+          const msg = initErr instanceof Error ? initErr.message : String(initErr);
+          throw new Error(`【ステップ1】LIFF初期化エラー: ${msg}`);
         }
 
         if (!liff.isLoggedIn()) {
-          // 念のため未ログインの場合もLINEログインへ飛ばす
           liff.login({ redirectUri: window.location.href });
           return;
         }
@@ -43,8 +54,9 @@ export function useAuth() {
         let liffProfile;
         try {
           liffProfile = await liff.getProfile();
-        } catch (profileErr: any) {
-          throw new Error(`【ステップ2】プロフィール取得エラー: ${profileErr.message}`);
+        } catch (profileErr: unknown) {
+          const msg = profileErr instanceof Error ? profileErr.message : String(profileErr);
+          throw new Error(`【ステップ2】プロフィール取得エラー: ${msg}`);
         }
 
         // ステップ3: IDトークンの取得
@@ -65,8 +77,9 @@ export function useAuth() {
             throw result.error;
           }
           authData = result.data;
-        } catch (supaErr: any) {
-          throw new Error(`【ステップ4】Supabase認証エラー: ${supaErr.message || JSON.stringify(supaErr)}`);
+        } catch (supaErr: unknown) {
+          const msg = supaErr instanceof Error ? supaErr.message : JSON.stringify(supaErr);
+          throw new Error(`【ステップ4】Supabase認証エラー: ${msg}`);
         }
 
         setProfile({
@@ -87,13 +100,14 @@ export function useAuth() {
               supabaseUserId: authData.user?.id,
             }),
           });
-        } catch (syncErr: any) {
+        } catch (syncErr: unknown) {
           console.error("プロフィール同期エラー（致命的ではない）:", syncErr);
         }
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Auth Init Error:", err);
-        setError(err.message || "認証エラーが発生しました");
+        const msg = err instanceof Error ? err.message : "認証エラーが発生しました";
+        setError(msg);
       } finally {
         setIsReady(true);
       }
@@ -104,4 +118,3 @@ export function useAuth() {
 
   return { isReady, profile, error };
 }
-
