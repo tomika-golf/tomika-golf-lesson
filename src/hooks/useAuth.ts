@@ -95,9 +95,11 @@ export function useAuth() {
 
         // ステップ5: プロフィール同期
         try {
+          const syncHeaders: HeadersInit = { "Content-Type": "application/json" };
+          if (json.session?.access_token) syncHeaders["Authorization"] = `Bearer ${json.session.access_token}`;
           await fetch("/api/auth/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: syncHeaders,
             body: JSON.stringify({
               lineId: liffProfile.userId,
               displayName: liffProfile.displayName,

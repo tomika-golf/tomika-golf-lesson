@@ -28,6 +28,16 @@ export async function POST(request: Request) {
       admin.from('reservations').select('status, lesson_type').eq('user_id', userId),
     ]);
 
+    // プロフィールがない場合は自動作成（FKエラー防止）
+    if (!profileResult.data) {
+      await admin.from('profiles').upsert({
+        id: userId,
+        name: 'ゲスト',
+        ticket_man_to_man: 0,
+        ticket_group: 0,
+      }, { onConflict: 'id' });
+    }
+
     const userProfile = profileResult.data || { ticket_man_to_man: 0, ticket_group: 0 };
     const userReservations = reservationsResult.data || [];
 
@@ -58,7 +68,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Database Error:', error);
-      return NextResponse.json({ success: false, error: '予約の保存に失敗しました' }, { status: 500 });
+      return NextResponse.json({ success: false, error: `予約の保存に失敗しました: ${error.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, reservation: data });

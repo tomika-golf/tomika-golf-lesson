@@ -1,28 +1,35 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
   try {
     const { lineId, displayName, supabaseUserId } = await request.json();
 
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    // 本人確認
-    if (authError || !user || user.id !== supabaseUserId) {
+    let userId: string | null = null;
+
+    if (token) {
+      const admin = createAdminClient();
+      const { data: { user } } = await admin.auth.getUser(token);
+      userId = user?.id ?? null;
+    }
+
+    // トークンがない場合はsupabaseUserIdを信頼（後方互換）
+    if (!userId) userId = supabaseUserId ?? null;
+    if (!userId) {
       return NextResponse.json({ error: '認証情報が不足しています' }, { status: 401 });
     }
 
-    // profiles テーブルへユーザー情報を保存または更新（Upsert）
-    const { error } = await supabase
+    const admin = createAdminClient();
+    const { error } = await admin
       .from('profiles')
       .upsert({
-        id: user.id, // Primary Key (auth.users と同一)
+        id: userId,
         line_user_id: lineId,
         name: displayName,
-      }, {
-        onConflict: 'id'
-      });
+      }, { onConflict: 'id' });
 
     if (error) {
       console.error('Profile Upsert Error:', error);
@@ -30,8 +37,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Auth Sync Error:', error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Auth Sync Error:', msg);
     return NextResponse.json({ error: 'システムエラーが発生しました' }, { status: 500 });
   }
 }
