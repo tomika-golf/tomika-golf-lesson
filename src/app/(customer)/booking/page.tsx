@@ -14,7 +14,7 @@ type TimeSlot = {
 };
 
 export default function BookingPage() {
-  const { isReady, profile, error: authError } = useAuth();
+  const { isReady, profile, error: authError, accessToken } = useAuth();
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   const [lastSlotDate, setLastSlotDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,9 +93,11 @@ export default function BookingPage() {
     
     setIsSubmitting(true);
     try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
       const response = await fetch("/api/booking", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           startTime: selectedSlot.startTime,
           endTime: selectedSlot.endTime,
