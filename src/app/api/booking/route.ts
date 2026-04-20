@@ -28,14 +28,18 @@ export async function POST(request: Request) {
       admin.from('reservations').select('status, lesson_type').eq('user_id', userId),
     ]);
 
-    // プロフィールがない場合は自動作成（FKエラー防止）
+    // プロフィールがない場合は自動作成（reservations.user_id FK → profiles.id）
     if (!profileResult.data) {
-      await admin.from('profiles').upsert({
+      const { error: profileUpsertError } = await admin.from('profiles').upsert({
         id: userId,
         name: 'ゲスト',
         ticket_man_to_man: 0,
         ticket_group: 0,
       }, { onConflict: 'id' });
+      if (profileUpsertError) {
+        console.error('Profile upsert error:', profileUpsertError);
+        return NextResponse.json({ success: false, error: `プロフィール作成失敗: ${profileUpsertError.message}` }, { status: 500 });
+      }
     }
 
     const userProfile = profileResult.data || { ticket_man_to_man: 0, ticket_group: 0 };
