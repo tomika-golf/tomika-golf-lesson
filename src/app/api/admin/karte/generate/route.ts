@@ -1,37 +1,51 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { formatKarteInput, KARTE_SYSTEM_PROMPT } from '@/utils/ai-prompts';
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.KARTE_CLAUDE_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GeminiのAPIキーが設定されていません。' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'KARTE_CLAUDE_API_KEYが設定されていません。VercelのEnvironment Variablesに追加してください。' },
+        { status: 500 }
+      );
     }
 
     const { good, improve, homework } = await request.json();
 
-    // 不要な空白や空文字の場合はハイフンにする
-    const safeGood = good?.trim() || "特になし";
-    const safeImprove = improve?.trim() || "特になし";
-    const safeHomework = homework?.trim() || "特になし";
+    const safeGood = good?.trim() || '特になし';
+    const safeImprove = improve?.trim() || '特になし';
+    const safeHomework = homework?.trim() || '特になし';
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // 最新かつ高速・安価な gemini-1.5-flash を使用します
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: KARTE_SYSTEM_PROMPT,
+    const userMessage = formatKarteInput(safeGood, safeImprove, safeHomework);
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: KARTE_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
     });
 
-    const prompt = formatKarteInput(safeGood, safeImprove, safeHomework);
-    
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Claude API error: ${err}`);
+    }
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text ?? '';
 
     return NextResponse.json({ success: true, text });
-  } catch (error: any) {
-    console.error('Gemini Generate Error:', error);
-    return NextResponse.json({ error: 'AIによるカルテの生成に失敗しました' }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Karte generate error:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

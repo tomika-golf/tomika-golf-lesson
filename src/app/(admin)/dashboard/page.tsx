@@ -146,12 +146,17 @@ export default function AdminDashboard() {
 
                       <div className="w-full">
                         {r.status === 'confirmed' ? (
-                          <button 
-                            onClick={() => handleComplete(r)}
-                            className="w-full py-3 bg-accent text-white font-bold rounded-lg shadow hover:bg-orange-600 transition"
-                          >
-                            ✅ 受講完了 (チケット消費)
-                          </button>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => handleComplete(r)}
+                              className="w-full py-3 bg-accent text-white font-bold rounded-lg shadow hover:bg-orange-600 transition"
+                            >
+                              ✅ 受講完了 (チケット消費)
+                            </button>
+                            <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-200 transition">
+                              📝 カルテを準備する
+                            </Link>
+                          </div>
                         ) : r.status === 'completed' ? (
                           <div className="w-full flex-col flex gap-2">
                             <div className="w-full text-center py-2 bg-gray-100 text-gray-500 font-bold rounded-lg px-2 text-sm">
