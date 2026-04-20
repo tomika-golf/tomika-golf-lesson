@@ -64,6 +64,7 @@ export function useAuth() {
         // （signInWithIdTokenのLINE OIDC設定不要な独自方式）
         const supabase = createClient();
         let authData;
+        let sessionAccessToken: string | null = null;
         try {
           const res = await fetch('/api/auth/line-session', {
             method: 'POST',
@@ -79,7 +80,8 @@ export function useAuth() {
           }
           const { error: setErr } = await supabase.auth.setSession(json.session);
           if (setErr) throw setErr;
-          setAccessToken(json.session.access_token);
+          sessionAccessToken = json.session.access_token ?? null;
+          setAccessToken(sessionAccessToken);
           authData = { user: { id: json.userId } };
         } catch (supaErr: unknown) {
           const msg = supaErr instanceof Error ? supaErr.message : JSON.stringify(supaErr);
@@ -96,7 +98,7 @@ export function useAuth() {
         // ステップ5: プロフィール同期
         try {
           const syncHeaders: HeadersInit = { "Content-Type": "application/json" };
-          if (json.session?.access_token) syncHeaders["Authorization"] = `Bearer ${json.session.access_token}`;
+          if (sessionAccessToken) syncHeaders["Authorization"] = `Bearer ${sessionAccessToken}`;
           await fetch("/api/auth/sync", {
             method: "POST",
             headers: syncHeaders,
