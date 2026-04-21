@@ -32,6 +32,10 @@ type Profile = {
   admin_memo: string | null;
 };
 
+function lessonLabel(type: "man-to-man" | "group") {
+  return type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）";
+}
+
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -40,6 +44,9 @@ export default function CustomerDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ticketMtm, setTicketMtm] = useState(0);
+  const [ticketGroup, setTicketGroup] = useState(0);
+  const [updating, setUpdating] = useState(false);
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -47,6 +54,8 @@ export default function CustomerDetailPage() {
       .then(data => {
         if (data.success) {
           setProfile(data.profile);
+          setTicketMtm(data.profile.ticket_man_to_man ?? 0);
+          setTicketGroup(data.profile.ticket_group ?? 0);
           setReservations(data.reservations);
         }
       })
@@ -55,9 +64,26 @@ export default function CustomerDetailPage() {
 
   useEffect(() => { fetchData(); }, [customerId]);
 
+  const updateTicket = async (field: "ticket_man_to_man" | "ticket_group", value: number) => {
+    const newValue = Math.max(0, value);
+    if (field === "ticket_man_to_man") setTicketMtm(newValue);
+    else setTicketGroup(newValue);
+
+    setUpdating(true);
+    try {
+      await fetch(`/api/admin/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: newValue }),
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
   const getKarte = (r: Reservation) => r.review_notes?.[0] ?? null;
@@ -81,19 +107,50 @@ export default function CustomerDetailPage() {
       <main className="p-4 max-w-3xl mx-auto space-y-6 mt-4">
 
         {/* プロフィールカード */}
-        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-3">
+        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
           {profile.name_kana && <p className="text-sm text-gray-500">{profile.name_kana}</p>}
           {profile.phone && <p className="text-sm text-gray-700">📞 {profile.phone}</p>}
-          <div className="flex gap-4">
-            <div className="bg-green-50 border border-green-100 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs font-bold text-green-700">マンツーマン</p>
-              <p className="text-2xl font-black text-green-700">{profile.ticket_man_to_man}<span className="text-sm ml-1">枚</span></p>
-            </div>
-            <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs font-bold text-orange-600">グループ</p>
-              <p className="text-2xl font-black text-orange-600">{profile.ticket_group}<span className="text-sm ml-1">枚</span></p>
+
+          {/* チケット管理 */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 mb-2">チケット枚数{updating && <span className="ml-2 text-blue-500">保存中...</span>}</p>
+            <div className="flex gap-4">
+              {/* 50分チケット */}
+              <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+                <p className="text-xs font-bold text-green-700 mb-2">マンツーマン（50分）</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => updateTicket("ticket_man_to_man", ticketMtm - 1)}
+                    className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold text-lg hover:bg-green-200 transition flex items-center justify-center"
+                  >－</button>
+                  <span className="text-3xl font-black text-green-700 w-10 text-center">{ticketMtm}</span>
+                  <button
+                    onClick={() => updateTicket("ticket_man_to_man", ticketMtm + 1)}
+                    className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold text-lg hover:bg-green-200 transition flex items-center justify-center"
+                  >＋</button>
+                </div>
+                <p className="text-xs text-green-600 mt-1">枚</p>
+              </div>
+
+              {/* 25分チケット */}
+              <div className="flex-1 bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
+                <p className="text-xs font-bold text-orange-600 mb-2">マンツーマン（25分）</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => updateTicket("ticket_group", ticketGroup - 1)}
+                    className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold text-lg hover:bg-orange-200 transition flex items-center justify-center"
+                  >－</button>
+                  <span className="text-3xl font-black text-orange-600 w-10 text-center">{ticketGroup}</span>
+                  <button
+                    onClick={() => updateTicket("ticket_group", ticketGroup + 1)}
+                    className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold text-lg hover:bg-orange-200 transition flex items-center justify-center"
+                  >＋</button>
+                </div>
+                <p className="text-xs text-orange-500 mt-1">枚</p>
+              </div>
             </div>
           </div>
+
           {profile.admin_memo && (
             <p className="text-sm text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-3">
               📌 管理メモ: {profile.admin_memo}
@@ -109,8 +166,8 @@ export default function CustomerDetailPage() {
               {upcoming.map(r => (
                 <div key={r.id} className="bg-white rounded-xl border border-blue-100 shadow-sm p-4 flex justify-between items-center">
                   <div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-1 ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'}`}>
-                      {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                    <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-1 ${r.lesson_type === "man-to-man" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-600"}`}>
+                      {lessonLabel(r.lesson_type)}
                     </span>
                     <p className="font-bold text-gray-800">{formatDate(r.start_time)}</p>
                   </div>
@@ -133,12 +190,12 @@ export default function CustomerDetailPage() {
               {completed.map(r => {
                 const karte = getKarte(r);
                 return (
-                  <div key={r.id} className={`bg-white rounded-xl border-l-4 shadow-sm p-4 ${r.lesson_type === 'man-to-man' ? 'border-green-600' : 'border-orange-500'}`}>
+                  <div key={r.id} className={`bg-white rounded-xl border-l-4 shadow-sm p-4 ${r.lesson_type === "man-to-man" ? "border-green-600" : "border-orange-500"}`}>
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'}`}>
-                            {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === "man-to-man" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-600"}`}>
+                            {lessonLabel(r.lesson_type)}
                           </span>
                           <p className="text-sm font-bold text-gray-700">{formatDate(r.start_time)}</p>
                         </div>
