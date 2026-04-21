@@ -74,7 +74,7 @@ export default function AdminBookingPage() {
 
   const handleSubmit = async () => {
     if (!selectedCustomer || !selectedSlot) return;
-    if (!window.confirm(`${selectedCustomer.name} 様\n${new Date(selectedSlot.startTime).toLocaleDateString()} ${formatTime(selectedSlot.startTime)}\n${lessonType === "man-to-man" ? "50分" : "25分"}\n\nこの内容で予約を入れますか？`)) return;
+    if (!window.confirm(`${selectedCustomer.name} 様\n${new Date(selectedSlot.startTime).toLocaleDateString()} ${formatTime(selectedSlot.startTime)}\n${lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}\n\nこの内容で予約を入れますか？`)) return;
 
     setSubmitting(true);
     try {
@@ -162,13 +162,13 @@ export default function AdminBookingPage() {
               onClick={() => { setLessonType("man-to-man"); setSelectedSlot(null); }}
               className={`flex-1 py-3 rounded-xl font-bold border-2 transition ${lessonType === "man-to-man" ? "bg-green-600 text-white border-green-600" : "border-gray-200 text-gray-600 hover:border-gray-400"}`}
             >
-              50分
+              マンツーマン（50分）
             </button>
             <button
               onClick={() => { setLessonType("group"); setSelectedSlot(null); }}
               className={`flex-1 py-3 rounded-xl font-bold border-2 transition ${lessonType === "group" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-600 hover:border-gray-400"}`}
             >
-              25分
+              マンツーマン（25分）
             </button>
           </div>
         </section>
