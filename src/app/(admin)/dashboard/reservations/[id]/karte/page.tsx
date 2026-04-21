@@ -12,15 +12,10 @@ type Reservation = {
 };
 
 type DraftData = {
-  good: string;
-  improve: string;
-  homework: string;
+  notes: string;
   aiResult: string;
   videoUrl: string;
 };
-
-const FIELDS = ["good", "improve", "homework"] as const;
-type Field = typeof FIELDS[number];
 
 function getDraftKey(id: string) {
   return `karte_draft_${id}`;
@@ -34,49 +29,40 @@ export default function KarteInputPage() {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [good, setGood] = useState("");
-  const [improve, setImprove] = useState("");
-  const [homework, setHomework] = useState("");
+  const [notes, setNotes] = useState("");
   const [aiResult, setAiResult] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
 
-  const [recordingField, setRecordingField] = useState<Field | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
 
-  // 音声認識サポート確認
   const isSpeechSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  // ページ読み込み時：DB + ローカルストレージからデータ取得
   useEffect(() => {
     async function load() {
       try {
-        // 予約情報を取得
         const resData = await fetch("/api/admin/reservations").then(r => r.json());
         if (resData.success) {
           const target = resData.reservations.find((r: Reservation) => r.id === reservationId);
           setReservation(target || null);
         }
 
-        // ローカルストレージのドラフト確認（優先）
         const raw = localStorage.getItem(getDraftKey(reservationId));
         if (raw) {
           const draft: DraftData = JSON.parse(raw);
-          setGood(draft.good || "");
-          setImprove(draft.improve || "");
-          setHomework(draft.homework || "");
+          setNotes(draft.notes || "");
           setAiResult(draft.aiResult || "");
           setVideoUrl(draft.videoUrl || "");
           setDraftSavedAt("一時保存データを復元しました");
           return;
         }
 
-        // ドラフトがなければDBの既存カルテを取得
         const karteData = await fetch(`/api/admin/karte/${reservationId}`).then(r => r.json());
         if (karteData.success && karteData.karte) {
           setAiResult(karteData.karte.karte_good || "");
@@ -91,30 +77,24 @@ export default function KarteInputPage() {
     load();
   }, [reservationId]);
 
-  // 一時保存（ローカルストレージ）
   const saveDraft = useCallback(() => {
-    const draft: DraftData = { good, improve, homework, aiResult, videoUrl };
+    const draft: DraftData = { notes, aiResult, videoUrl };
     localStorage.setItem(getDraftKey(reservationId), JSON.stringify(draft));
     const now = new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
     setDraftSavedAt(`${now} に一時保存しました`);
-  }, [good, improve, homework, aiResult, videoUrl, reservationId]);
+  }, [notes, aiResult, videoUrl, reservationId]);
 
-  // 音声入力開始・停止
-  const toggleRecording = (field: Field) => {
+  const toggleRecording = () => {
     if (!isSpeechSupported) {
       alert("このブラウザは音声入力に対応していません。Chrome / Safari をお使いください。");
       return;
     }
 
-    if (recordingField === field) {
-      // 録音停止
+    if (isRecording) {
       recognitionRef.current?.stop();
-      setRecordingField(null);
+      setIsRecording(false);
       return;
     }
-
-    // 他のフィールドが録音中なら停止
-    recognitionRef.current?.stop();
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -127,28 +107,25 @@ export default function KarteInputPage() {
         .slice(event.resultIndex)
         .map((r: any) => r[0].transcript)
         .join("");
-      if (field === "good") setGood(prev => prev + (prev ? "、" : "") + transcript);
-      if (field === "improve") setImprove(prev => prev + (prev ? "、" : "") + transcript);
-      if (field === "homework") setHomework(prev => prev + (prev ? "、" : "") + transcript);
+      setNotes(prev => prev + (prev ? "\n" : "") + transcript);
     };
 
     recognition.onend = () => {
-      setRecordingField(null);
+      setIsRecording(false);
     };
 
     recognition.onerror = () => {
-      setRecordingField(null);
+      setIsRecording(false);
     };
 
     recognition.start();
     recognitionRef.current = recognition;
-    setRecordingField(field);
+    setIsRecording(true);
   };
 
-  // AI要約
   const handleAiGenerate = async () => {
-    if (!good && !improve && !homework) {
-      alert("何かメモを入力してください。");
+    if (!notes.trim()) {
+      alert("メモを入力してください。");
       return;
     }
     setIsGenerating(true);
@@ -156,7 +133,7 @@ export default function KarteInputPage() {
       const res = await fetch("/api/admin/karte/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ good, improve, homework }),
+        body: JSON.stringify({ notes }),
       });
       const data = await res.json();
       if (data.success) {
@@ -171,16 +148,11 @@ export default function KarteInputPage() {
     }
   };
 
-  // 動画ファイル選択（UI のみ、アップロードは今後実装）
   const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setVideoFile(file);
-      // TODO: Supabase Storageへのアップロード実装後にURLをセット
-    }
+    if (file) setVideoFile(file);
   };
 
-  // DB保存（公開）
   const handleSave = async (isDraft: boolean) => {
     if (!aiResult) {
       alert("AIで要約してから保存してください。");
@@ -191,17 +163,11 @@ export default function KarteInputPage() {
       const res = await fetch("/api/admin/karte/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationId,
-          content: aiResult,
-          videoUrl,
-          isDraft,
-        }),
+        body: JSON.stringify({ reservationId, content: aiResult, videoUrl, isDraft }),
       });
       const data = await res.json();
       if (data.success) {
         if (!isDraft) {
-          // 公開時はローカルストレージのドラフトを削除
           localStorage.removeItem(getDraftKey(reservationId));
           alert("カルテを公開しました！お客様のマイページに表示されます。");
           router.push("/dashboard");
@@ -251,45 +217,36 @@ export default function KarteInputPage() {
         {/* 左列：メモ入力 */}
         <section className="space-y-5">
           <div className="bg-white rounded-xl border shadow-sm p-5">
-            <h2 className="font-bold text-gray-700 mb-4">✏️ レッスンメモ</h2>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-bold text-gray-700">✏️ レッスンメモ</h2>
+              {isSpeechSupported && (
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`flex items-center gap-1 text-sm font-bold px-3 py-2 rounded-lg transition ${
+                    isRecording
+                      ? "bg-red-500 text-white animate-pulse"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  🎙️ {isRecording ? "録音停止" : "音声入力"}
+                </button>
+              )}
+            </div>
 
-            {/* 良かった点 */}
-            <NoteField
-              label="✅ 今日の良かった点"
-              labelColor="text-green-700"
-              value={good}
-              onChange={setGood}
-              placeholder="例：スイングの軌道が改善された。ドライバーの飛距離が伸びた。"
-              isRecording={recordingField === "good"}
-              onToggleRecording={() => toggleRecording("good")}
-              isSpeechSupported={isSpeechSupported}
+            {isRecording && (
+              <p className="text-xs text-red-500 mb-2 animate-pulse">● 録音中... 話し終わったら「録音停止」を押してください</p>
+            )}
+
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-gray-400 resize-none"
+              rows={10}
+              placeholder="レッスン内容を自由にメモしてください。&#10;例：スイングの軌道が改善された。バックスイングで右膝が伸びすぎる。次回は壁に頭をつけて素振り。"
             />
 
-            {/* 改善点 */}
-            <NoteField
-              label="⚠️ 今後の改善点"
-              labelColor="text-orange-600"
-              value={improve}
-              onChange={setImprove}
-              placeholder="例：バックスイングで右膝が伸びすぎる。"
-              isRecording={recordingField === "improve"}
-              onToggleRecording={() => toggleRecording("improve")}
-              isSpeechSupported={isSpeechSupported}
-            />
-
-            {/* 宿題 */}
-            <NoteField
-              label="🏠 次回までの宿題"
-              labelColor="text-blue-600"
-              value={homework}
-              onChange={setHomework}
-              placeholder="例：家で壁に頭をつけて素振り。"
-              isRecording={recordingField === "homework"}
-              onToggleRecording={() => toggleRecording("homework")}
-              isSpeechSupported={isSpeechSupported}
-            />
-
-            <div className="flex gap-2 mt-5">
+            <div className="flex gap-2 mt-4">
               <button
                 onClick={handleAiGenerate}
                 disabled={isGenerating}
@@ -331,7 +288,6 @@ export default function KarteInputPage() {
           {/* 動画添付 */}
           <div className="bg-white rounded-xl border shadow-sm p-5">
             <h2 className="font-bold text-gray-700 mb-3">🎬 動画添付（任意）</h2>
-
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-bold text-gray-500 block mb-1">動画URL（YouTube・Google Driveなど）</label>
@@ -343,7 +299,6 @@ export default function KarteInputPage() {
                   className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
                 />
               </div>
-
               <div>
                 <label className="text-xs font-bold text-gray-500 block mb-1">
                   動画ファイル添付
@@ -354,12 +309,7 @@ export default function KarteInputPage() {
                   <span className="text-sm text-gray-500">
                     {videoFile ? videoFile.name : "クリックして動画ファイルを選択"}
                   </span>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoFile}
-                    className="hidden"
-                  />
+                  <input type="file" accept="video/*" onChange={handleVideoFile} className="hidden" />
                 </label>
               </div>
             </div>
@@ -385,48 +335,6 @@ export default function KarteInputPage() {
 
         </section>
       </main>
-    </div>
-  );
-}
-
-// 音声入力付きメモフィールド
-function NoteField({
-  label, labelColor, value, onChange, placeholder, isRecording, onToggleRecording, isSpeechSupported,
-}: {
-  label: string;
-  labelColor: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  isRecording: boolean;
-  onToggleRecording: () => void;
-  isSpeechSupported: boolean;
-}) {
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-1">
-        <label className={`text-xs font-bold ${labelColor}`}>{label}</label>
-        {isSpeechSupported && (
-          <button
-            type="button"
-            onClick={onToggleRecording}
-            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg transition ${
-              isRecording
-                ? "bg-red-500 text-white animate-pulse"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            🎙️ {isRecording ? "録音停止" : "音声入力"}
-          </button>
-        )}
-      </div>
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-gray-400 resize-none"
-        rows={3}
-        placeholder={placeholder}
-      />
     </div>
   );
 }

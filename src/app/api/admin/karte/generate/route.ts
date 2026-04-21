@@ -11,13 +11,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { good, improve, homework } = await request.json();
+    const { notes } = await request.json();
 
-    const safeGood = good?.trim() || '特になし';
-    const safeImprove = improve?.trim() || '特になし';
-    const safeHomework = homework?.trim() || '特になし';
+    const safeNotes = notes?.trim() || '';
+    if (!safeNotes) {
+      return NextResponse.json({ error: 'メモが空です' }, { status: 400 });
+    }
 
-    const userMessage = formatKarteInput(safeGood, safeImprove, safeHomework);
+    const userMessage = formatKarteInput(safeNotes);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

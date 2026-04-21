@@ -10,7 +10,7 @@ type TimeSlot = {
   endTime: string;
   isAvailable: boolean;
   isBlockedByTimeToStart: boolean;
-  lessonType: "man-to-man" | "group" | "both";
+  lessonType: "man-to-man" | "group";
 };
 
 export default function BookingPage() {
@@ -40,12 +40,9 @@ export default function BookingPage() {
       .catch(console.error);
   }, [isReady]);
 
-  // 選択中のlessonTypeに対応するスロットだけに絞り込む
+  // 選択中のlessonTypeに対応するスロットだけに絞り込む（空き枠のみ）
   const filteredSlots = useMemo(() => {
-    return allSlots.filter((slot) => {
-      if (slot.lessonType === "both") return true;
-      return slot.lessonType === lessonType;
-    });
+    return allSlots.filter((slot) => slot.lessonType === lessonType && slot.isAvailable);
   }, [allSlots, lessonType]);
 
   // カレンダーに表示する日付の一覧（今日〜60日後）
@@ -169,7 +166,7 @@ export default function BookingPage() {
                 lessonType === "man-to-man" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
               }`}
             >
-              マンツーマン
+              50分
             </button>
             <button
               onClick={() => handleLessonTypeChange("group")}
@@ -177,7 +174,7 @@ export default function BookingPage() {
                 lessonType === "group" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
               }`}
             >
-              グループ
+              25分
             </button>
           </div>
         </section>
@@ -256,7 +253,7 @@ export default function BookingPage() {
               <div className="bg-gray-50 border rounded-xl p-6 text-center">
                 <p className="text-gray-500 text-sm">
                   {format(selectedDate, "M月d日", { locale: ja })}は
-                  {lessonType === "man-to-man" ? "マンツーマン" : "グループ"}レッスンの枠がありません。
+                  {lessonType === "man-to-man" ? "50分" : "25分"}レッスンの枠がありません。
                 </p>
               </div>
             ) : (
@@ -340,7 +337,7 @@ export default function BookingPage() {
             <div className="flex-1 text-sm font-bold text-gray-700">
               <div>{format(new Date(selectedSlot.startTime), "M/d(E) H:mm", { locale: ja })}</div>
               <div className="text-brand">
-                {lessonType === "man-to-man" ? "マンツーマン" : "グループ"} チケット 1枚消費
+                {lessonType === "man-to-man" ? "50分" : "25分"} チケット 1枚消費
               </div>
             </div>
             <button

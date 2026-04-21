@@ -1,61 +1,78 @@
-import { addMinutes, isBefore, addHours, differenceInMinutes, startOfHour } from 'date-fns';
+import { addMinutes, isBefore, differenceInMinutes, startOfHour } from 'date-fns';
 
 export interface TimeSlot {
   startTime: Date;
   endTime: Date;
-  isAvailable: boolean; // 既に予約で埋まっていれば false
-  isBlockedByTimeToStart: boolean; // 直前ブロック判定（3時間前を切っていたら true）
-  lessonType: 'man-to-man' | 'group' | 'both'; // この枠がどちらの種別向けか
+  isAvailable: boolean;
+  isBlockedByTimeToStart: boolean;
+  lessonType: 'man-to-man' | 'group';
+}
+
+export interface ExistingReservation {
+  start_time: string;
+  end_time: string;
+}
+
+function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
+  return aStart < bEnd && aEnd > bStart;
 }
 
 /**
- * カレンダーの1つの「稼働ブロック（例: 9:00〜13:00）」を受け取り、
- * 「毎時00分スタート、50分終わりの10分インターバル」の枠（スロット）に自動分割します。
- * 
- * @param blockStart 稼働ブロックの開始時刻
- * @param blockEnd 稼働ブロックの終了時刻
- * @param now 現在の時刻（直前ブロック判定用）
- * @param blockHours 直前ブロックの基準時間（例：3時間前）
- * @param lessonType この稼働ブロックの対象レッスン種別
- * @returns 分割された予約枠（スロット）の配列
+ * カレンダーの1つの稼働ブロックを受け取り、
+ * 50分枠（毎時00分スタート、man-to-man）と
+ * 25分枠（毎時00分・30分スタート、group）の両方を生成する。
+ * 既存予約と重複するスロットは isAvailable: false になる。
  */
 export function sliceBlockIntoSlots(
   blockStart: Date,
   blockEnd: Date,
   now: Date = new Date(),
   blockHours: number = 3,
-  lessonType: 'man-to-man' | 'group' | 'both' = 'both'
+  existingReservations: ExistingReservation[] = []
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
-  
-  // カレンダーの開始時刻を「XX時00分」のキリの良い時間に揃える
-  let currentStartTime = startOfHour(blockStart);
 
-  while (isBefore(currentStartTime, blockEnd)) {
-    // スロットの終了時間は、開始時間から50分後
-    const slotEndTime = addMinutes(currentStartTime, 50);
+  const reservations = existingReservations.map(r => ({
+    start: new Date(r.start_time),
+    end: new Date(r.end_time),
+  }));
 
-    // カレンダーの稼働終了時刻をはみ出すスロットは作成しない
-    // 例：ブロック終了が12:30の場合、12:00〜12:50の枠は除外する
-    if (isBefore(blockEnd, slotEndTime)) {
-       break;
-    }
+  const hourStart = startOfHour(blockStart);
 
-    // 直前予約ブロック機能の判定 (要件定義書 4.3)
-    // レッスン開始時刻と現在時刻の差分(分)が、指定時間(3時間=180分)未満ならブロックする
-    const diffMinutes = differenceInMinutes(currentStartTime, now);
-    const isBlockedByTimeToStart = diffMinutes < (blockHours * 60);
+  // 50-min slots (man-to-man): on the hour only
+  for (let cur = new Date(hourStart); isBefore(cur, blockEnd); cur = addMinutes(cur, 60)) {
+    const end = addMinutes(cur, 50);
+    if (isBefore(blockEnd, end)) continue;
+
+    const diffMinutes = differenceInMinutes(cur, now);
+    const isBlockedByTimeToStart = diffMinutes < blockHours * 60;
+    const isAvailable = !reservations.some(r => overlaps(cur, end, r.start, r.end));
 
     slots.push({
-      startTime: currentStartTime,
-      endTime: slotEndTime,
-      isAvailable: true, // 初期状態は「空き」。予約が入っているかどうかの確認処理はAPI側で行う
+      startTime: new Date(cur),
+      endTime: end,
+      isAvailable,
       isBlockedByTimeToStart,
-      lessonType,
+      lessonType: 'man-to-man',
     });
+  }
 
-    // 次のスロットは、1時間後（実質10分のインターバル）
-    currentStartTime = addHours(currentStartTime, 1);
+  // 25-min slots (group): on the hour and half-hour
+  for (let cur = new Date(hourStart); isBefore(cur, blockEnd); cur = addMinutes(cur, 30)) {
+    const end = addMinutes(cur, 25);
+    if (isBefore(blockEnd, end)) continue;
+
+    const diffMinutes = differenceInMinutes(cur, now);
+    const isBlockedByTimeToStart = diffMinutes < blockHours * 60;
+    const isAvailable = !reservations.some(r => overlaps(cur, end, r.start, r.end));
+
+    slots.push({
+      startTime: new Date(cur),
+      endTime: end,
+      isAvailable,
+      isBlockedByTimeToStart,
+      lessonType: 'group',
+    });
   }
 
   return slots;

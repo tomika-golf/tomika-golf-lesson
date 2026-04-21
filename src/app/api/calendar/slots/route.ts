@@ -1,22 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getCalendarClient } from '@/lib/google-calendar';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { addDays } from 'date-fns';
 import { sliceBlockIntoSlots } from '@/utils/slot-slicer';
 
-// キーワード判定
-// 予定名に「マンツーマン」が含まれていれば man-to-man 専用
-// 予定名に「グループ」が含まれていれば group 専用
-// それ以外で「稼働」「レッスン」が含まれていれば両方対応（both）
 const TARGET_KEYWORDS = ['稼働', 'レッスン', 'マンツーマン', 'グループ'];
 
-function detectLessonType(summary: string): 'man-to-man' | 'group' | 'both' | null {
-  const lowerSummary = summary.toLowerCase();
-
-  if (lowerSummary.includes('マンツーマン')) return 'man-to-man';
-  if (lowerSummary.includes('グループ')) return 'group';
-  // 上記のいずれにも該当しないが「稼働」や「レッスン」を含む場合はどちらにも使える
-  if (lowerSummary.includes('稼働') || lowerSummary.includes('レッスン')) return 'both';
-  return null; // 関係ない予定
+function isRelevantEvent(summary: string): boolean {
+  return TARGET_KEYWORDS.some(kw => summary.includes(kw));
 }
 
 export const revalidate = 0;
@@ -29,39 +20,43 @@ export async function GET() {
     }
 
     const calendar = getCalendarClient();
-    
-    // 今日から60日先までの予定を取得（枠を長めに出す）
+
     const timeMin = new Date().toISOString();
     const timeMax = addDays(new Date(), 60).toISOString();
 
-    const response = await calendar.events.list({
-      calendarId: calendarId,
-      timeMin: timeMin,
-      timeMax: timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
+    // カレンダーイベントと既存予約を並行取得
+    const [calendarResponse, reservationsResult] = await Promise.all([
+      calendar.events.list({
+        calendarId,
+        timeMin,
+        timeMax,
+        singleEvents: true,
+        orderBy: 'startTime',
+      }),
+      createAdminClient()
+        .from('reservations')
+        .select('start_time, end_time, lesson_type')
+        .eq('status', 'confirmed'),
+    ]);
 
-    const items = response.data.items || [];
-    const now = new Date(); // 現在時刻
+    const items = calendarResponse.data.items || [];
+    const existingReservations = reservationsResult.data || [];
+    const now = new Date();
 
-    // 稼働ブロックを50分枠のスロットに自動分割（種別付き）
+    // すべての稼働ブロックから50分枠と25分枠を生成（既存予約で空き判定）
     const allSlots = items.flatMap(event => {
       const summary = event.summary || '';
-      const lessonType = detectLessonType(summary);
-
-      if (!lessonType) return []; // 関係のない予定はスキップ
+      if (!isRelevantEvent(summary)) return [];
 
       const start = event.start?.dateTime ? new Date(event.start.dateTime) : null;
       const end = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
       if (start && end) {
-        return sliceBlockIntoSlots(start, end, now, 3, lessonType);
+        return sliceBlockIntoSlots(start, end, now, 3, existingReservations);
       }
       return [];
     });
 
-    // 全スロットの中で最も遅い日付を取得（フロント側で「まだ枠が追加されていません」判定に使用）
     let lastSlotDate: string | null = null;
     if (allSlots.length > 0) {
       const lastSlot = allSlots[allSlots.length - 1];
@@ -71,7 +66,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       slots: allSlots,
-      lastSlotDate, // フロントに「最後の枠の日付」を渡す
+      lastSlotDate,
     });
   } catch (error: any) {
     console.error('Slots API Error:', error);
