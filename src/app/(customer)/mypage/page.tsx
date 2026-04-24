@@ -153,8 +153,8 @@ export default function MyPage() {
               {upcomingReservations.map((r) => (
                 <div key={r.id} className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
                   <div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-2 ${r.lesson_type === "man-to-man" ? "bg-green-100 text-brand" : "bg-orange-100 text-accent"}`}>
-                      {r.lesson_type === "man-to-man" ? "マンツーマン" : "グループ"}
+                    <span className="text-xs font-bold px-2 py-1 rounded inline-block mb-2 bg-green-100 text-brand">
+                      {r.lesson_type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}
                     </span>
                     <p className="font-bold text-gray-800 text-lg">
                       {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00

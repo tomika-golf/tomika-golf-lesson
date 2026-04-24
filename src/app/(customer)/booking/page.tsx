@@ -23,7 +23,6 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [lessonType, setLessonType] = useState<"man-to-man" | "group">("man-to-man");
-  const [options, setOptions] = useState<string[]>([]);
   const [memo, setMemo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -81,12 +80,6 @@ export default function BookingPage() {
     return isAfter(startOfDay(selectedDate), startOfDay(new Date(lastSlotDate)));
   }, [selectedDate, lastSlotDate]);
 
-  const handleOptionToggle = (option: string) => {
-    setOptions((prev) =>
-      prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
-    );
-  };
-
   const handleBooking = async () => {
     if (!selectedSlot) return;
     setIsSubmitting(true);
@@ -100,14 +93,14 @@ export default function BookingPage() {
           startTime: selectedSlot.startTime,
           endTime: selectedSlot.endTime,
           lessonType,
-          options,
+          options: [],
           memo,
         }),
       });
       const data = await response.json();
       if (data.success) {
         showToast("予約が完了しました！");
-        setSelectedSlot(null);
+        setTimeout(() => router.push("/mypage"), 1500);
       } else {
         showToast("エラー: " + data.error, false);
       }
@@ -121,7 +114,6 @@ export default function BookingPage() {
   const handleLessonTypeChange = (type: "man-to-man" | "group") => {
     setLessonType(type);
     setSelectedSlot(null);
-    if (type === "group") setOptions([]);
   };
 
   if (!isReady) {
@@ -288,25 +280,6 @@ export default function BookingPage() {
           <section className="mb-8 animate-fade-in">
             <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">4. 事前ヒアリング</h2>
 
-            {lessonType === "man-to-man" && (
-              <div className="mb-4 bg-white p-4 rounded-lg border">
-                <label className="block font-bold mb-2 text-gray-700">追加オプション (複数選択可)</label>
-                <div className="flex flex-wrap gap-2">
-                  {["芝 (+1,000円)", "バンカー (+1,000円)"].map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => handleOptionToggle(opt)}
-                      className={`px-4 py-2 rounded-full border text-sm font-bold transition-colors ${
-                        options.includes(opt) ? "bg-green-100 border-brand text-brand" : "bg-gray-50 border-gray-300 text-gray-600"
-                      }`}
-                    >
-                      {options.includes(opt) ? "✓ " : ""}{opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="bg-white p-4 rounded-lg border">
               <label className="block font-bold mb-2 text-gray-700">今回の希望課題など（自由記述）</label>
               <textarea
@@ -327,7 +300,7 @@ export default function BookingPage() {
             <div className="flex-1 text-sm font-bold text-gray-700">
               <div>{format(new Date(selectedSlot.startTime), "M/d(E) H:mm", { locale: ja })}</div>
               <div className="text-brand">
-                {lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"} チケット 1枚消費
+                {lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}
               </div>
             </div>
             <button

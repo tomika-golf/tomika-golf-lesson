@@ -56,6 +56,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: ruleCheck.errorMessage }, { status: 400 });
     }
 
+    // ダブルブッキング防止：同時間帯にconfirmedな予約が存在しないか確認
+    const { data: conflicting, error: conflictError } = await admin
+      .from('reservations')
+      .select('id')
+      .eq('status', 'confirmed')
+      .lt('start_time', endTime)
+      .gt('end_time', startTime)
+      .limit(1);
+
+    if (conflictError) {
+      console.error('Conflict check error:', conflictError);
+      return NextResponse.json({ success: false, error: '予約確認中にエラーが発生しました' }, { status: 500 });
+    }
+
+    if (conflicting && conflicting.length > 0) {
+      return NextResponse.json({ success: false, error: 'この時間帯はすでに予約が入っています。他の時間帯をお選びください。' }, { status: 409 });
+    }
+
     const { data, error } = await admin
       .from('reservations')
       .insert({
