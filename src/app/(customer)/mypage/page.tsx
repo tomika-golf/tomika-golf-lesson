@@ -53,9 +53,11 @@ export default function MyPage() {
     }
 
     try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
       const res = await fetch("/api/booking/cancel", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ reservationId: reservation.id }),
       });
       const data = await res.json();

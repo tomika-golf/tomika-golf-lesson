@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { addDays, format, startOfDay, isSameDay, isAfter, isBefore } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +15,7 @@ type TimeSlot = {
 };
 
 export default function BookingPage() {
+  const router = useRouter();
   const { isReady, profile, error: authError, accessToken } = useAuth();
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   const [lastSlotDate, setLastSlotDate] = useState<string | null>(null);
@@ -152,7 +154,7 @@ export default function BookingPage() {
       {/* ヘッダー */}
       <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex items-center justify-between">
         <h1 className="text-xl font-bold">🎯 レッスン予約</h1>
-        <button className="text-sm border border-white px-3 py-1 rounded">戻る</button>
+        <button onClick={() => router.back()} className="text-sm border border-white px-3 py-1 rounded">戻る</button>
       </header>
 
       <main className="flex-1 p-4 max-w-2xl mx-auto w-full">

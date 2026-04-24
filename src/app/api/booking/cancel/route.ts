@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { differenceInHours } from 'date-fns';
 
 export async function POST(request: Request) {
   try {
     const { reservationId } = await request.json();
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || '00000000-0000-0000-0000-000000000000'; // 開発環境用
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    // キャンセル対象の予約データを取得して状態を確認
-    const { data: reservation, error: fetchError } = await supabase
+    if (!token) {
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
+    }
+
+    const admin = createAdminClient();
+    const { data: { user } } = await admin.auth.getUser(token);
+
+    if (!user) {
+      return NextResponse.json({ error: '認証に失敗しました' }, { status: 401 });
+    }
+
+    const userId = user.id;
+
+    const { data: reservation, error: fetchError } = await admin
       .from('reservations')
       .select('*')
       .eq('id', reservationId)
@@ -26,14 +37,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'この予約はすでにキャンセルされているか、受講完了しています。' }, { status: 400 });
     }
 
-    // キャンセル期限のチェック（例：レッスン開始の3時間前まで）
     const hoursUntilLesson = differenceInHours(new Date(reservation.start_time), new Date());
     if (hoursUntilLesson < 3) {
       return NextResponse.json({ error: 'レッスン開始3時間前を過ぎているため、キャンセルはお電話でご連絡ください。' }, { status: 400 });
     }
 
-    // 予約を「キャンセル」に更新
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from('reservations')
       .update({ status: 'cancelled' })
       .eq('id', reservationId);
@@ -42,8 +51,6 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
-    // 注意：チケットは「完了時」に減るため、キャンセル時はチケットを「戻す」処理は発生しません。
-    
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Cancel API Error:', error);
