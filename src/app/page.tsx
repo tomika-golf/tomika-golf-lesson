@@ -176,15 +176,27 @@ export default function Home() {
               />
             </div>
             <div>
-              <p className="text-xs text-green-700 font-bold mb-1">Senior Golf Instructor</p>
-              <h3 className="text-2xl font-extrabold text-gray-900 mb-1">松山 正直</h3>
-              <p className="text-xs text-gray-500 mb-4">元東建塩河カントリー倶楽部 ／ HCP8 ／ ベストスコア72</p>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                「基礎の徹底」を土台にしながらも、決して型にはめることはせず、
-                お客様一人ひとりの骨格やクセに合わせた最適なスイングをご提案します。
-                一番大切にしているのは「誠実に向き合うこと」。
-                どんな些細なことでも質問しやすい環境を作ることです。
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">USGTF認定 ゴルフレッスンプロ 2級</span>
+                <span className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded">富加ゴルフ 支配人</span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-gray-900 mb-3">松山 正直</h3>
+              <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                富加ゴルフの支配人として、長年にわたりお客様のゴルフと向き合い続けてきました。
+                「このショットどうすれば？」という何気ない質問から、スイングの根本的な改善まで、
+                現場でお客様とともに積み上げてきた実践的な知見を持っています。
               </p>
+              <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                このたびUSGTF公認のゴルフレッスンプロ資格を取得し、
+                その経験を体系的なレッスンとしてお届けします。
+              </p>
+              <div className="bg-white border-l-4 border-green-500 pl-4 py-2 rounded-r-lg">
+                <p className="text-xs text-green-700 font-bold mb-1">レッスンで大切にしていること</p>
+                <p className="text-sm text-gray-700 leading-snug">
+                  「まずあなたの悩みをしっかり聞くこと」が出発点です。マンツーマンだからこそ、
+                  あなたが今一番解決したいことを丁寧に引き出し、的確なアドバイスで一緒に改善していきます。
+                </p>
+              </div>
             </div>
           </div>
         </div>
