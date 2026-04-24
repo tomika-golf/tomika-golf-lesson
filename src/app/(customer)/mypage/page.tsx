@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 type Profile = {
   name: string;
-  ticket_man_to_man: number;
-  ticket_group: number;
 };
 
 type Reservation = {
@@ -19,10 +18,18 @@ type Reservation = {
 };
 
 export default function MyPage() {
-  const { isReady, profile: lineProfile, error: authError, accessToken } = useAuth();
+  const router = useRouter();
+  const { isReady, error: authError, accessToken } = useAuthContext();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
+
+  const showToast = (msg: string, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -41,17 +48,12 @@ export default function MyPage() {
     }
   };
 
-  // LINEログインが完了した後にプロフィールを取得する
   useEffect(() => {
     if (!isReady) return;
     fetchProfile();
   }, [isReady, accessToken]);
 
-  const handleCancel = async (reservation: Reservation) => {
-    if (!window.confirm("この予約をキャンセルしますか？\n（キャンセル期限は開始の3時間前までです）")) {
-      return;
-    }
-
+  const executeCancel = async (reservation: Reservation) => {
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
@@ -61,19 +63,17 @@ export default function MyPage() {
         body: JSON.stringify({ reservationId: reservation.id }),
       });
       const data = await res.json();
-      
       if (data.success) {
-        alert("予約をキャンセルしました。");
-        fetchProfile(); // データを再取得して表示を更新
+        showToast("予約をキャンセルしました。");
+        fetchProfile();
       } else {
-        alert("エラー: " + data.error);
+        showToast(data.error || "キャンセルに失敗しました。", false);
       }
-    } catch (err) {
-      alert("通信エラーが発生しました。");
+    } catch {
+      showToast("通信エラーが発生しました。", false);
     }
   };
 
-  // 認証中はローディング表示
   if (!isReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
@@ -83,7 +83,6 @@ export default function MyPage() {
     );
   }
 
-  // 認証エラー
   if (authError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 p-8">
@@ -103,7 +102,37 @@ export default function MyPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white font-bold text-sm ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
+          {toast.msg}
+        </div>
+      )}
+
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <p className="font-bold text-gray-800 mb-1 text-center">予約をキャンセルしますか？</p>
+            <p className="text-xs text-gray-500 mb-6 text-center">キャンセル期限は開始の3時間前までです</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelTarget(null)}
+                className="flex-1 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-600"
+              >
+                戻る
+              </button>
+              <button
+                onClick={() => { executeCancel(cancelTarget); setCancelTarget(null); }}
+                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold"
+              >
+                キャンセルする
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+        <button onClick={() => router.back()} className="text-sm border border-white px-3 py-1 rounded">戻る</button>
         <h1 className="text-xl font-bold">マイページ</h1>
         <Link href="/booking" className="text-sm bg-accent px-3 py-1 rounded shadow">予約する</Link>
       </header>
@@ -113,23 +142,6 @@ export default function MyPage() {
           <p className="text-xl font-bold text-gray-800">{profile.name} 様、こんにちは！</p>
         </div>
 
-        {/* チケット残数カード */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
-          <div className="flex-1 bg-green-50 p-4 rounded-xl text-center border border-green-100">
-            <p className="text-xs font-bold text-brand mb-1">マンツーマン</p>
-            <p className="text-3xl font-black text-brand tracking-tighter">
-              {profile.ticket_man_to_man} <span className="text-sm font-bold ml-1">枚</span>
-            </p>
-          </div>
-          <div className="flex-1 bg-orange-50 p-4 rounded-xl text-center border border-orange-100">
-            <p className="text-xs font-bold text-accent mb-1">グループ</p>
-            <p className="text-3xl font-black text-accent tracking-tighter">
-              {profile.ticket_group} <span className="text-sm font-bold ml-1">枚</span>
-            </p>
-          </div>
-        </section>
-
-        {/* 次回のレッスン予約一覧 */}
         <section>
           <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-brand pb-1 flex items-center gap-2">
             📅 予約中のレッスン
@@ -141,15 +153,15 @@ export default function MyPage() {
               {upcomingReservations.map((r) => (
                 <div key={r.id} className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
                   <div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-2 ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                      {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                    <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-2 ${r.lesson_type === "man-to-man" ? "bg-green-100 text-brand" : "bg-orange-100 text-accent"}`}>
+                      {r.lesson_type === "man-to-man" ? "マンツーマン" : "グループ"}
                     </span>
                     <p className="font-bold text-gray-800 text-lg">
                       {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
                     </p>
                   </div>
-                  <button 
-                    onClick={() => handleCancel(r)}
+                  <button
+                    onClick={() => setCancelTarget(r)}
                     className="text-sm border-2 border-gray-300 text-gray-500 font-bold px-3 py-2 rounded-lg hover:bg-gray-50"
                   >
                     キャンセル
@@ -160,7 +172,6 @@ export default function MyPage() {
           )}
         </section>
 
-        {/* 過去のレッスンとカルテ */}
         <section>
           <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-gray-400 pb-1 flex items-center gap-2">
             ⛳ 過去の履歴とカルテ
@@ -176,13 +187,13 @@ export default function MyPage() {
                       {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
                     </p>
                     <p className="text-xs font-bold mt-1 text-gray-500">
-                      {r.status === 'completed' ? '✅ 受講完了' : '❌ キャンセル'}
+                      {r.status === "completed" ? "✅ 受講完了" : "❌ キャンセル"}
                     </p>
                   </div>
-                  {r.status === 'completed' && (
-                     <Link href={`/mypage/karte/${r.id}`} className="text-xs bg-brand text-white font-bold px-3 py-2 rounded shadow">
-                        カルテを見る
-                     </Link>
+                  {r.status === "completed" && (
+                    <Link href={`/mypage/karte/${r.id}`} className="text-xs bg-brand text-white font-bold px-3 py-2 rounded shadow">
+                      カルテを見る
+                    </Link>
                   )}
                 </div>
               ))}

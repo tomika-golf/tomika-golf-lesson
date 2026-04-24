@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, format, startOfDay, isSameDay, isAfter, isBefore } from "date-fns";
 import { ja } from "date-fns/locale";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 type TimeSlot = {
   startTime: string;
@@ -16,7 +16,7 @@ type TimeSlot = {
 
 export default function BookingPage() {
   const router = useRouter();
-  const { isReady, profile, error: authError, accessToken } = useAuth();
+  const { isReady, error: authError, accessToken } = useAuthContext();
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
   const [lastSlotDate, setLastSlotDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,10 +26,15 @@ export default function BookingPage() {
   const [options, setOptions] = useState<string[]>([]);
   const [memo, setMemo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-  // LINEログインが完了した後にカレンダーを取得する
+  const showToast = (msg: string, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
-    if (!isReady) return; // 認証が完了するまで待機
+    if (!isReady) return;
     fetch("/api/calendar/slots")
       .then((res) => res.json())
       .then((data) => {
@@ -42,12 +47,10 @@ export default function BookingPage() {
       .catch(console.error);
   }, [isReady]);
 
-  // 選択中のlessonTypeに対応するスロットだけに絞り込む（空き枠のみ）
   const filteredSlots = useMemo(() => {
     return allSlots.filter((slot) => slot.lessonType === lessonType && slot.isAvailable);
   }, [allSlots, lessonType]);
 
-  // カレンダーに表示する日付の一覧（今日〜60日後）
   const calendarDates = useMemo(() => {
     const dates: Date[] = [];
     const today = startOfDay(new Date());
@@ -57,7 +60,6 @@ export default function BookingPage() {
     return dates;
   }, []);
 
-  // 各日付に何枠あるかのカウントマップ（視覚的に枠がある日にマークをつけるため）
   const dateSlotCountMap = useMemo(() => {
     const map = new Map<string, number>();
     filteredSlots.forEach((slot) => {
@@ -67,7 +69,6 @@ export default function BookingPage() {
     return map;
   }, [filteredSlots]);
 
-  // 選択した日の枠だけを表示
   const slotsForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     return filteredSlots.filter((slot) =>
@@ -75,7 +76,6 @@ export default function BookingPage() {
     );
   }, [filteredSlots, selectedDate]);
 
-  // 「まだ日程が追加されていません」表示の判定
   const isDateBeyondLastSlot = useMemo(() => {
     if (!selectedDate || !lastSlotDate) return false;
     return isAfter(startOfDay(selectedDate), startOfDay(new Date(lastSlotDate)));
@@ -89,7 +89,6 @@ export default function BookingPage() {
 
   const handleBooking = async () => {
     if (!selectedSlot) return;
-    
     setIsSubmitting(true);
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -105,29 +104,26 @@ export default function BookingPage() {
           memo,
         }),
       });
-      
       const data = await response.json();
       if (data.success) {
-        alert("予約が完了しました！（※開発中のテスト通知です）");
+        showToast("予約が完了しました！");
         setSelectedSlot(null);
       } else {
-        alert("エラー: " + data.error);
+        showToast("エラー: " + data.error, false);
       }
-    } catch (error) {
-      alert("通信エラーが発生しました。");
+    } catch {
+      showToast("通信エラーが発生しました。", false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // lessonType変更時にスロット選択をリセット
   const handleLessonTypeChange = (type: "man-to-man" | "group") => {
     setLessonType(type);
     setSelectedSlot(null);
     if (type === "group") setOptions([]);
   };
 
-  // 認証中はローディング表示
   if (!isReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
@@ -137,7 +133,6 @@ export default function BookingPage() {
     );
   }
 
-  // 認証エラー
   if (authError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 p-8">
@@ -151,14 +146,18 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
-      {/* ヘッダー */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white font-bold text-sm ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
+          {toast.msg}
+        </div>
+      )}
+
       <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex items-center justify-between">
         <h1 className="text-xl font-bold">🎯 レッスン予約</h1>
         <button onClick={() => router.back()} className="text-sm border border-white px-3 py-1 rounded">戻る</button>
       </header>
 
       <main className="flex-1 p-4 max-w-2xl mx-auto w-full">
-        {/* レッスン種別の選択 */}
         <section className="mb-6">
           <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">1. レッスン種別</h2>
           <div className="flex gap-4">
@@ -181,7 +180,6 @@ export default function BookingPage() {
           </div>
         </section>
 
-        {/* カレンダー日付選択 */}
         <section className="mb-6">
           <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">2. 日にちを選ぶ</h2>
           {loading ? (
@@ -189,19 +187,14 @@ export default function BookingPage() {
           ) : (
             <div className="bg-white rounded-xl border shadow-sm p-3 overflow-x-auto">
               <div className="grid grid-cols-7 gap-1 min-w-[320px]">
-                {/* 曜日ヘッダー */}
                 {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
                   <div key={day} className={`text-center text-xs font-bold py-1 ${day === "日" ? "text-red-500" : day === "土" ? "text-blue-500" : "text-gray-500"}`}>
                     {day}
                   </div>
                 ))}
-                
-                {/* 最初の日の曜日分の空白を埋める */}
                 {Array.from({ length: calendarDates[0]?.getDay() || 0 }).map((_, i) => (
                   <div key={`empty-${i}`} />
                 ))}
-                
-                {/* 日付ボタン */}
                 {calendarDates.map((date) => {
                   const dateKey = format(date, "yyyy-MM-dd");
                   const slotCount = dateSlotCountMap.get(dateKey) || 0;
@@ -236,7 +229,6 @@ export default function BookingPage() {
           )}
         </section>
 
-        {/* 時間枠の選択 */}
         {selectedDate && (
           <section className="mb-6">
             <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">
@@ -244,14 +236,12 @@ export default function BookingPage() {
             </h2>
 
             {isDateBeyondLastSlot ? (
-              // 最後の枠より未来の日付を選択した場合
               <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
                 <div className="text-3xl mb-3">📅</div>
                 <p className="font-bold text-gray-700 mb-1">まだ日程が追加されていません</p>
                 <p className="text-sm text-gray-500">日程追加まで少々お待ちください。</p>
               </div>
             ) : slotsForSelectedDate.length === 0 ? (
-              // 枠の範囲内だが、この日には枠がない場合
               <div className="bg-gray-50 border rounded-xl p-6 text-center">
                 <p className="text-gray-500 text-sm">
                   {format(selectedDate, "M月d日", { locale: ja })}は
@@ -294,11 +284,10 @@ export default function BookingPage() {
           </section>
         )}
 
-        {/* ヒアリング（事前アンケート） */}
         {selectedSlot && (
           <section className="mb-8 animate-fade-in">
             <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">4. 事前ヒアリング</h2>
-            
+
             {lessonType === "man-to-man" && (
               <div className="mb-4 bg-white p-4 rounded-lg border">
                 <label className="block font-bold mb-2 text-gray-700">追加オプション (複数選択可)</label>
@@ -332,7 +321,6 @@ export default function BookingPage() {
         )}
       </main>
 
-      {/* 予約ボタン（画面下部固定） */}
       {selectedSlot && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
           <div className="max-w-2xl mx-auto flex gap-4 items-center">
@@ -345,9 +333,9 @@ export default function BookingPage() {
             <button
               onClick={handleBooking}
               disabled={isSubmitting}
-              className={`flex-1 ${isSubmitting ? 'bg-gray-400' : 'bg-accent hover:translate-y-[-2px]'} text-white py-3 rounded-xl font-bold shadow-md transition-all`}
+              className={`flex-1 ${isSubmitting ? "bg-gray-400" : "bg-accent hover:translate-y-[-2px]"} text-white py-3 rounded-xl font-bold shadow-md transition-all`}
             >
-              {isSubmitting ? '処理中...' : '予約を確定する'}
+              {isSubmitting ? "処理中..." : "予約を確定する"}
             </button>
           </div>
         </div>
