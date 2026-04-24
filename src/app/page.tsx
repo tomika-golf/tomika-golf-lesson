@@ -5,12 +5,10 @@ import { LiffRedirectHandler } from "@/components/LiffRedirectHandler";
 export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans">
-      {/* LINE認証後のリダイレクトを処理する（ユーザーには見えない） */}
       <LiffRedirectHandler />
 
       {/* ========== ① ヒーロー ========== */}
       <section className="relative h-screen min-h-[600px] flex flex-col justify-end overflow-hidden">
-        {/* 仮の背景画像（後ほど実際の写真に差し替え） */}
         <div className="absolute inset-0 z-0">
           <Image
             src="/hero.png"
@@ -19,17 +17,17 @@ export default function Home() {
             style={{ objectFit: "cover", objectPosition: "center" }}
             priority
           />
-          {/* 暗くするオーバーレイ */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
         </div>
 
-        {/* ロゴ */}
         <div className="absolute top-0 left-0 right-0 z-10 px-6 py-5 flex justify-between items-center">
           <span className="text-white text-xl font-bold tracking-widest drop-shadow-lg">⛳ 富加ゴルフ</span>
         </div>
 
-        {/* キャッチコピー */}
         <div className="relative z-10 px-6 pb-16 text-white max-w-2xl mx-auto w-full">
+          <div className="inline-block bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-4 shadow">
+            🎉 5月限定キャンペーン実施中
+          </div>
           <p className="text-sm font-bold tracking-widest text-green-300 mb-3 uppercase">Tomika Golf Lesson</p>
           <h1 className="text-3xl sm:text-4xl font-extrabold leading-snug mb-4 drop-shadow-lg">
             毎週の練習、そろそろ<br />「結果」に変えませんか？
@@ -60,9 +58,8 @@ export default function Home() {
                 icon: "🌿",
                 title: "マット練習からの卒業。本番さながらの「実践環境」",
                 desc: "練習場では綺麗に打てるのに、コースに出るとスコアが崩れる…そんな悩みを解消します。芝やバンカーからの本格的なショット練習で、スコアに直結する技術を身につけます。",
-                // 写真：芝からのショット練習風景
                 imgSrc: "/grass.png",
-                imgAlt: "芝での実践練習（※後ほど実際の写真に差し替え）"
+                imgAlt: "芝での実践練習"
               },
               {
                 icon: "📱",
@@ -84,8 +81,6 @@ export default function Home() {
                   <div className="relative h-48 w-full">
                     <Image src={item.imgSrc} alt={item.imgAlt || ""} fill style={{ objectFit: "cover" }} />
                     <div className="absolute inset-0 bg-black/10" />
-                    {/* 写真差し替え案内 */}
-                    <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">📷 {item.imgAlt}</div>
                   </div>
                 )}
                 <div className="p-5">
@@ -109,63 +104,59 @@ export default function Home() {
           <p className="text-center text-green-700 text-sm font-bold tracking-widest mb-2">LESSON MENU</p>
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">レッスンメニュー</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="border-2 border-green-600 rounded-2xl p-6">
+            <div className="border-2 border-green-600 rounded-2xl p-6 relative">
               <div className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-4">マンツーマン</div>
               <h3 className="text-xl font-extrabold text-gray-900 mb-2">完全個別指導<br /><span className="text-3xl text-green-700">50<span className="text-base">分</span></span></h3>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                50分間プロを独り占め。あなたのスイングを徹底分析し、弱点を克服します。
-                芝・バンカーでの実践練習オプションも選択可能。
+                50分間プロを独り占め。あなたのスイングを徹底分析し、課題を一緒に改善していきます。じっくり取り組みたい方に最適です。
               </p>
               <p className="text-xs font-bold text-green-700 bg-green-50 p-2 rounded-lg">✅ 短期間で確実にスコアを伸ばしたい方向け</p>
             </div>
-            <div className="border-2 border-orange-400 rounded-2xl p-6">
-              <div className="bg-orange-400 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-4">グループ（最大3名）</div>
-              <h3 className="text-xl font-extrabold text-gray-900 mb-2">少人数グループ<br /><span className="text-3xl text-orange-500">50<span className="text-base">分</span></span></h3>
+            <div className="border-2 border-green-600 rounded-2xl p-6 relative">
+              <div className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-4">マンツーマン</div>
+              <h3 className="text-xl font-extrabold text-gray-900 mb-2">集中個別指導<br /><span className="text-3xl text-green-700">25<span className="text-base">分</span></span></h3>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                最大3名の少人数制・巡回型レッスン。定期的なプロのチェックで上達のペースを維持しながら、コストを抑えて通えます。
+                25分間・一点集中でポイントを絞った指導。「今日はここだけ直したい」という方や、忙しい方でも通いやすいメニューです。
               </p>
-              <p className="text-xs font-bold text-orange-600 bg-orange-50 p-2 rounded-lg">✅ 毎週コツコツ通いたい方向け</p>
+              <p className="text-xs font-bold text-green-700 bg-green-50 p-2 rounded-lg">✅ 気軽にコツコツ続けたい方向け</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ========== ④ 料金表 ========== */}
+      {/* ========== ④ 料金プラン ========== */}
       <section className="bg-gray-50 py-16 px-6">
         <div className="max-w-2xl mx-auto">
           <p className="text-center text-green-700 text-sm font-bold tracking-widest mb-2">PRICE</p>
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-2">料金プラン</h2>
-          <p className="text-center text-xs text-gray-500 mb-10">表示価格はすべて税込です</p>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-green-700 text-white">
-                  <th className="p-4 text-left font-bold">メニュー</th>
-                  <th className="p-4 text-right font-bold">料金</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                <tr className="hover:bg-gray-50">
-                  <td className="p-4 font-bold text-gray-800">マンツーマン（50分）</td>
-                  <td className="p-4 text-right font-extrabold text-green-700 text-lg">¥7,000</td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="p-4 font-bold text-gray-800">グループ（50分 / 最大3名）</td>
-                  <td className="p-4 text-right font-extrabold text-orange-500 text-lg">¥3,000</td>
-                </tr>
-                <tr className="hover:bg-gray-50 bg-gray-50">
-                  <td className="p-4 text-gray-600">
-                    <span className="font-bold">オプション：芝 or バンカー練習</span><br />
-                    <span className="text-xs text-gray-400">マンツーマン限定</span>
-                  </td>
-                  <td className="p-4 text-right font-bold text-gray-700">＋¥1,000</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="p-4 text-xs text-gray-500 bg-gray-50 border-t">
-              ※ボール代込み｜※チケット制（前払い）
+          <p className="text-center text-xs text-gray-500 mb-8">表示価格はすべて税込・ボール代込みです</p>
+
+          {/* 5月限定バナー */}
+          <div className="bg-red-50 border-2 border-red-400 rounded-2xl p-5 mb-6 text-center">
+            <span className="bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full">🎉 5月限定キャンペーン価格</span>
+            <p className="text-gray-700 text-sm mt-3 leading-relaxed">
+              5月中は特別価格でレッスンをご体験いただけます。<br />
+              <span className="text-red-500 font-bold">6月より正規料金に変更予定ですので、お早めにどうぞ！</span>
+            </p>
+          </div>
+
+          {/* 料金カード */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
+              <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
+              <p className="text-2xl font-extrabold text-gray-900 mb-1">50分</p>
+              <p className="text-4xl font-black text-green-700 leading-none">¥3,000</p>
+              <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
+            </div>
+            <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
+              <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
+              <p className="text-2xl font-extrabold text-gray-900 mb-1">25分</p>
+              <p className="text-4xl font-black text-green-700 leading-none">¥1,500</p>
+              <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
             </div>
           </div>
+
+          <p className="text-center text-xs text-gray-400">※6月以降の正規料金は別途ご案内いたします</p>
         </div>
       </section>
 
@@ -175,11 +166,10 @@ export default function Home() {
           <p className="text-center text-green-700 text-sm font-bold tracking-widest mb-2">INSTRUCTOR</p>
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">講師紹介</h2>
           <div className="bg-gray-50 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 items-start">
-            {/* 仮の講師写真（後で実際の写真に差し替え） */}
             <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0 mx-auto sm:mx-0">
               <Image
                 src="/instructor.png"
-                alt="松山 正直 インストラクター（※後ほど実際の写真に差し替え）"
+                alt="松山 正直 インストラクター"
                 fill
                 style={{ objectFit: "cover" }}
                 className="rounded-full border-4 border-green-200 shadow-lg"
@@ -206,7 +196,6 @@ export default function Home() {
           <p className="text-center text-green-700 text-sm font-bold tracking-widest mb-2">ACCESS</p>
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">アクセス・施設情報</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Googleマップ埋め込み（仮） */}
             <div className="relative w-full h-52 bg-gray-200 flex items-center justify-center">
               <a
                 href="https://maps.google.com/?q=岐阜県加茂郡富加町加治田260"
@@ -244,10 +233,10 @@ export default function Home() {
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">よくある質問</h2>
           <div className="space-y-4">
             {[
-              { q: "初心者でも大丈夫ですか？", a: "もちろん大歓迎です！基礎を徹底しながら、お一人おひとりに合わせたペースで誠実に指導いたします。" },
+              { q: "初心者でも大丈夫ですか？", a: "もちろん大歓迎です！基礎を徹底しながら、お一人おひとりに合わせたペースで誠実に指導いたします。クラブの握り方から丁寧にお教えします。" },
+              { q: "50分と25分、どちらを選べばいいですか？", a: "しっかり時間をかけて複数の課題に取り組みたい方には50分、「今日はここだけ直したい」という集中練習や初めての体験には25分がおすすめです。迷ったらお気軽にご相談ください。" },
               { q: "ボール代は別途かかりますか？", a: "いいえ、レッスン料金にはボール代が含まれています。追加料金を気にせず練習に集中いただけます。" },
-              { q: "芝やバンカーの練習は誰でもできますか？", a: "マンツーマンレッスンのオプション（＋1,000円）としてご用意しています。より本番に近い環境で集中して練習したい方におすすめです。" },
-              { q: "キャンセルはいつまで可能ですか？", a: "レッスン開始の3時間前まで、マイページからキャンセルが可能です。" },
+              { q: "キャンセルはいつまで可能ですか？", a: "レッスン開始の3時間前まで、マイページからキャンセルが可能です。それ以降のキャンセルはお電話でご連絡ください。" },
             ].map((item, i) => (
               <details key={i} className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden group">
                 <summary className="p-5 cursor-pointer font-bold text-gray-900 flex justify-between items-center select-none hover:bg-gray-100 transition-colors">
@@ -266,12 +255,15 @@ export default function Home() {
       {/* ========== ⑧ CTA（最後の誘導） ========== */}
       <section className="bg-green-700 py-16 px-6 text-white text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-extrabold mb-3">まずは初回レッスンを<br />ご予約ください</h2>
-          <p className="text-green-200 text-sm mb-2">ご予約のステップは簡単！</p>
+          <div className="inline-block bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4 shadow">
+            🎉 5月限定キャンペーン実施中
+          </div>
+          <h2 className="text-2xl font-extrabold mb-3">まずは1回、体験してみませんか？</h2>
+          <p className="text-green-200 text-sm mb-2">ご予約の流れはとても簡単！</p>
           <ol className="text-sm text-white/90 text-left inline-block space-y-2 mb-8 mt-2">
-            <li className="flex gap-2"><span className="font-bold text-green-300">①</span>ご希望のチケットをご購入</li>
-            <li className="flex gap-2"><span className="font-bold text-green-300">②</span>予約カレンダーから日時を選択して予約完了</li>
-            <li className="flex gap-2"><span className="font-bold text-green-300">③</span>レッスン後、あなた専用の「カルテ」がマイページに届きます！</li>
+            <li className="flex gap-2"><span className="font-bold text-green-300">①</span>予約カレンダーから希望の日時を選んで予約完了</li>
+            <li className="flex gap-2"><span className="font-bold text-green-300">②</span>当日、プロによるマンツーマンレッスンを受講</li>
+            <li className="flex gap-2"><span className="font-bold text-green-300">③</span>レッスン後、あなた専用の「AIカルテ」がマイページに届きます</li>
           </ol>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/booking" className="bg-white text-green-700 font-extrabold py-4 px-8 rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-lg">
@@ -287,7 +279,7 @@ export default function Home() {
       {/* フッター */}
       <footer className="bg-gray-900 text-white text-center py-6 text-xs text-gray-400">
         <p>⛳ 富加ゴルフ / 岐阜県加茂郡富加町加治田260</p>
-        <p className="mt-1">© 2025 Tomika Golf. All rights reserved.</p>
+        <p className="mt-1">© 2026 Tomika Golf. All rights reserved.</p>
       </footer>
     </div>
   );
