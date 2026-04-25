@@ -16,6 +16,7 @@ export function useAuth() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [needsRegistration, setNeedsRegistration] = useState(false);
 
   useEffect(() => {
     async function initAuth() {
@@ -26,9 +27,6 @@ export function useAuth() {
         }
 
         // ステップ1: LIFFの初期化
-        // "Unable to load client features" は古いLINEとの互換用CDNスクリプトの
-        // 読み込み失敗であり、認証（getProfile/getIDToken）自体には影響しない。
-        // このエラーは無視して続行する。それ以外のエラーは致命的として扱う。
         try {
           await liff.init({ liffId });
         } catch (initErr: unknown) {
@@ -61,7 +59,6 @@ export function useAuth() {
         }
 
         // ステップ4: サーバー経由でSupabaseセッションを作成
-        // （signInWithIdTokenのLINE OIDC設定不要な独自方式）
         const supabase = createClient();
         let authData;
         let sessionAccessToken: string | null = null;
@@ -95,11 +92,11 @@ export function useAuth() {
           supabaseUserId: authData.user?.id,
         });
 
-        // ステップ5: プロフィール同期
+        // ステップ5: プロフィール同期（hasNameで名前登録が必要か判定）
         try {
           const syncHeaders: HeadersInit = { "Content-Type": "application/json" };
           if (sessionAccessToken) syncHeaders["Authorization"] = `Bearer ${sessionAccessToken}`;
-          await fetch("/api/auth/sync", {
+          const syncRes = await fetch("/api/auth/sync", {
             method: "POST",
             headers: syncHeaders,
             body: JSON.stringify({
@@ -108,6 +105,10 @@ export function useAuth() {
               supabaseUserId: authData.user?.id,
             }),
           });
+          const syncData = await syncRes.json();
+          if (syncData.success && syncData.hasName === false) {
+            setNeedsRegistration(true);
+          }
         } catch (syncErr: unknown) {
           console.error("プロフィール同期エラー（致命的ではない）:", syncErr);
         }
@@ -124,5 +125,5 @@ export function useAuth() {
     initAuth();
   }, []);
 
-  return { isReady, profile, error, accessToken };
+  return { isReady, profile, error, accessToken, needsRegistration };
 }

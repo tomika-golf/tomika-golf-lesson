@@ -16,27 +16,41 @@ export async function POST(request: Request) {
       userId = user?.id ?? null;
     }
 
-    // トークンがない場合はsupabaseUserIdを信頼（後方互換）
     if (!userId) userId = supabaseUserId ?? null;
     if (!userId) {
       return NextResponse.json({ error: '認証情報が不足しています' }, { status: 401 });
     }
 
     const admin = createAdminClient();
-    const { error } = await admin
+
+    // 既存プロフィールを確認
+    const { data: existing } = await admin
       .from('profiles')
-      .upsert({
+      .select('id, name')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      // 既存ユーザー：line_user_idのみ更新し、名前は上書きしない
+      await admin.from('profiles').update({ line_user_id: lineId }).eq('id', userId);
+    } else {
+      // 新規ユーザー：名前はnullにして登録画面で入力してもらう
+      const { error } = await admin.from('profiles').insert({
         id: userId,
         line_user_id: lineId,
-        name: displayName,
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.error('Profile Upsert Error:', error);
-      return NextResponse.json({ error: 'プロフィールの保存に失敗しました' }, { status: 500 });
+        name: null,
+        ticket_man_to_man: 0,
+        ticket_group: 0,
+      });
+      if (error) {
+        console.error('Profile Insert Error:', error);
+        return NextResponse.json({ error: 'プロフィールの保存に失敗しました' }, { status: 500 });
+      }
     }
 
-    return NextResponse.json({ success: true });
+    const hasName = !!(existing?.name);
+
+    return NextResponse.json({ success: true, hasName });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Auth Sync Error:', msg);

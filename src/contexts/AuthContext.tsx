@@ -9,6 +9,7 @@ type AuthContextValue = {
   profile: UserProfile | null;
   error: string | null;
   accessToken: string | null;
+  needsRegistration: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);

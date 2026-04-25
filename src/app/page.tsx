@@ -168,16 +168,16 @@ export default function Home() {
           <div className="bg-gray-50 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 items-start">
             <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0 mx-auto sm:mx-0">
               <Image
-                src="/instructor.png"
+                src="/instructor.jpg"
                 alt="松山 正直 インストラクター"
                 fill
-                style={{ objectFit: "cover" }}
+                style={{ objectFit: "cover", objectPosition: "center top" }}
                 className="rounded-full border-4 border-green-200 shadow-lg"
               />
             </div>
             <div>
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">USGTF認定 ゴルフレッスンプロ 2級</span>
+                <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">USGTFレッスンプロ レベルⅡ</span>
                 <span className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded">富加ゴルフ 支配人</span>
               </div>
               <h3 className="text-2xl font-extrabold text-gray-900 mb-3">松山 正直</h3>
