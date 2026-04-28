@@ -104,10 +104,10 @@ export default function AdminDashboard() {
             {reservations.length === 0 ? (
               <p className="text-gray-500 bg-white p-6 rounded text-center">現在、予定されているレッスンはありません。</p>
             ) : (
-              reservations.map((r) => (
+              reservations.filter(r => r.status !== 'cancelled').map((r) => (
                 <div key={r.id} className={`bg-white p-5 rounded-xl shadow-sm border-l-4 ${r.status === 'completed' ? 'border-gray-400 opacity-60' : r.lesson_type === 'man-to-man' ? 'border-brand' : 'border-accent'}`}>
                   <div className="flex flex-col md:flex-row justify-between gap-4">
-                    
+
                     {/* 左側：顧客情報と日時 */}
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -118,15 +118,14 @@ export default function AdminDashboard() {
                           {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
                         </span>
                       </div>
-                      
+
                       <h3 className="font-black text-xl text-gray-800 mt-2">
                         {r.profiles?.name || '名称未設定'} 様
                       </h3>
                       {r.profiles?.phone && (
                         <p className="text-sm text-gray-500 mt-1">📞 {r.profiles.phone}</p>
                       )}
-                      
-                      {/* メモやオプション */}
+
                       {(r.options?.length > 0 || r.customer_memo) && (
                         <div className="mt-3 bg-gray-50 p-3 rounded text-sm text-gray-700">
                           {r.options?.length > 0 && <p className="font-bold text-accent mb-1">オプション: {r.options.join(', ')}</p>}
@@ -135,16 +134,8 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    {/* 右側：チケット状態とアクション操作 */}
-                    <div className="flex flex-col items-end justify-between min-w-[200px] border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4">
-                      <div className="text-right w-full mb-3 md:mb-0">
-                        <p className="text-xs text-gray-500 font-bold mb-1">現在の保有チケット</p>
-                        <p className="text-sm text-gray-700">
-                          マンツー: <span className="font-bold text-brand">{r.profiles?.ticket_man_to_man || 0}</span>枚 / 
-                          グループ: <span className="font-bold text-accent">{r.profiles?.ticket_group || 0}</span>枚
-                        </p>
-                      </div>
-
+                    {/* 右側：アクション */}
+                    <div className="flex flex-col items-end justify-end min-w-[200px] border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4">
                       <div className="w-full">
                         {r.status === 'confirmed' ? (
                           <div className="flex flex-col gap-2">
@@ -152,13 +143,13 @@ export default function AdminDashboard() {
                               onClick={() => handleComplete(r)}
                               className="w-full py-3 bg-accent text-white font-bold rounded-lg shadow hover:bg-orange-600 transition"
                             >
-                              ✅ 受講完了 (チケット消費)
+                              ✅ 受講完了
                             </button>
                             <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-200 transition">
                               📝 カルテを準備する
                             </Link>
                           </div>
-                        ) : r.status === 'completed' ? (
+                        ) : (
                           <div className="w-full flex-col flex gap-2">
                             {r.review_notes && r.review_notes.length > 0 ? (
                               <div className={`w-full text-center py-1.5 rounded-lg px-2 text-xs font-bold ${r.review_notes[0].is_draft ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-700'}`}>
@@ -172,10 +163,6 @@ export default function AdminDashboard() {
                             <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-blue-600 text-white font-bold rounded-lg px-2 text-sm shadow hover:bg-blue-700 transition">
                               {r.review_notes && r.review_notes.length > 0 ? '📝 カルテを確認・編集' : '📝 カルテを作成'}
                             </Link>
-                          </div>
-                        ) : (
-                          <div className="w-full text-center py-3 bg-red-50 text-red-500 font-bold rounded-lg">
-                            ❌ キャンセルされました
                           </div>
                         )}
                       </div>

@@ -82,13 +82,7 @@ export default function CustomersPage() {
                     )}
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    <p className="text-xs text-gray-500 mb-1">チケット残数</p>
-                    <p className="text-sm">
-                      <span className="font-bold text-green-700">50分 {c.ticket_man_to_man}枚</span>
-                      <span className="text-gray-400 mx-1">/</span>
-                      <span className="font-bold text-orange-600">25分 {c.ticket_group}枚</span>
-                    </p>
-                    <p className="text-xs text-blue-600 font-bold mt-2">カルテを見る →</p>
+                    <p className="text-xs text-blue-600 font-bold">カルテを見る →</p>
                   </div>
                 </div>
               </Link>

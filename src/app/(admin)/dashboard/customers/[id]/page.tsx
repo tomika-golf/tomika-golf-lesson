@@ -44,9 +44,6 @@ export default function CustomerDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ticketMtm, setTicketMtm] = useState(0);
-  const [ticketGroup, setTicketGroup] = useState(0);
-  const [updating, setUpdating] = useState(false);
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -54,8 +51,6 @@ export default function CustomerDetailPage() {
       .then(data => {
         if (data.success) {
           setProfile(data.profile);
-          setTicketMtm(data.profile.ticket_man_to_man ?? 0);
-          setTicketGroup(data.profile.ticket_group ?? 0);
           setReservations(data.reservations);
         }
       })
@@ -63,23 +58,6 @@ export default function CustomerDetailPage() {
   };
 
   useEffect(() => { fetchData(); }, [customerId]);
-
-  const updateTicket = async (field: "ticket_man_to_man" | "ticket_group", value: number) => {
-    const newValue = Math.max(0, value);
-    if (field === "ticket_man_to_man") setTicketMtm(newValue);
-    else setTicketGroup(newValue);
-
-    setUpdating(true);
-    try {
-      await fetch(`/api/admin/customers/${customerId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: newValue }),
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -110,46 +88,6 @@ export default function CustomerDetailPage() {
         <section className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
           {profile.name_kana && <p className="text-sm text-gray-500">{profile.name_kana}</p>}
           {profile.phone && <p className="text-sm text-gray-700">📞 {profile.phone}</p>}
-
-          {/* チケット管理 */}
-          <div>
-            <p className="text-xs font-bold text-gray-500 mb-2">チケット枚数{updating && <span className="ml-2 text-blue-500">保存中...</span>}</p>
-            <div className="flex gap-4">
-              {/* 50分チケット */}
-              <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-3 text-center">
-                <p className="text-xs font-bold text-green-700 mb-2">マンツーマン（50分）</p>
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => updateTicket("ticket_man_to_man", ticketMtm - 1)}
-                    className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold text-lg hover:bg-green-200 transition flex items-center justify-center"
-                  >－</button>
-                  <span className="text-3xl font-black text-green-700 w-10 text-center">{ticketMtm}</span>
-                  <button
-                    onClick={() => updateTicket("ticket_man_to_man", ticketMtm + 1)}
-                    className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold text-lg hover:bg-green-200 transition flex items-center justify-center"
-                  >＋</button>
-                </div>
-                <p className="text-xs text-green-600 mt-1">枚</p>
-              </div>
-
-              {/* 25分チケット */}
-              <div className="flex-1 bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
-                <p className="text-xs font-bold text-orange-600 mb-2">マンツーマン（25分）</p>
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => updateTicket("ticket_group", ticketGroup - 1)}
-                    className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold text-lg hover:bg-orange-200 transition flex items-center justify-center"
-                  >－</button>
-                  <span className="text-3xl font-black text-orange-600 w-10 text-center">{ticketGroup}</span>
-                  <button
-                    onClick={() => updateTicket("ticket_group", ticketGroup + 1)}
-                    className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 font-bold text-lg hover:bg-orange-200 transition flex items-center justify-center"
-                  >＋</button>
-                </div>
-                <p className="text-xs text-orange-500 mt-1">枚</p>
-              </div>
-            </div>
-          </div>
 
           {profile.admin_memo && (
             <p className="text-sm text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-3">
