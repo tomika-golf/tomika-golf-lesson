@@ -6,6 +6,18 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+function parseKarteSections(content: string) {
+  const goodMatch = content.match(/【今日の良かった点[^】]*】\s*([\s\S]*?)(?=【|$)/);
+  const improveMatch = content.match(/【改善のポイント[^】]*】\s*([\s\S]*?)(?=【|$)/);
+  const homeworkMatch = content.match(/【次回までの宿題[^】]*】\s*([\s\S]*?)(?=【|$)/);
+
+  return {
+    good: goodMatch?.[1]?.trim() || content,
+    improve: improveMatch?.[1]?.trim() || '',
+    homework: homeworkMatch?.[1]?.trim() || '',
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const { reservationId, content, videoUrl, isDraft } = await request.json();
@@ -14,12 +26,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Reservation ID is missing' }, { status: 400 });
     }
 
-    // review_notes テーブルにカルテを保存（すでに存在すれば更新：Upsert）
+    const { good, improve, homework } = parseKarteSections(content);
+
     const { data, error } = await supabaseAdmin
       .from('review_notes')
       .upsert({
         reservation_id: reservationId,
-        karte_good: content, // 今回はAIが清書した全文をここに格納します
+        karte_good: good,
+        karte_improve: improve,
+        karte_homework: homework,
         video_url: videoUrl || '',
         is_draft: isDraft ?? false,
       }, {
@@ -34,8 +49,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    console.error('Save Karte API Error:', error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Save Karte API Error:', msg);
     return NextResponse.json({ error: 'システムエラーが発生しました' }, { status: 500 });
   }
 }

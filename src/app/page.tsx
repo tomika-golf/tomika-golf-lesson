@@ -145,13 +145,13 @@ export default function Home() {
             <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
               <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
               <p className="text-2xl font-extrabold text-gray-900 mb-1">50分</p>
-              <p className="text-4xl font-black text-green-700 leading-none">¥3,000</p>
+              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥3,000</p>
               <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
             </div>
             <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
               <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
               <p className="text-2xl font-extrabold text-gray-900 mb-1">25分</p>
-              <p className="text-4xl font-black text-green-700 leading-none">¥1,500</p>
+              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥1,500</p>
               <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
             </div>
           </div>
