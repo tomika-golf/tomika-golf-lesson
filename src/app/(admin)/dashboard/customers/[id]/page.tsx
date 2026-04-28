@@ -201,14 +201,14 @@ export default function CustomerDetailPage() {
                         </div>
 
                         {karte ? (
-                          <div className="mt-2 bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs font-bold text-gray-500 mb-1">
+                          <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-1">
+                            <p className="text-xs font-bold text-gray-500">
                               📋 カルテ {karte.is_draft ? <span className="text-orange-500">（下書き）</span> : <span className="text-green-600">（公開済）</span>}
                             </p>
-                            <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">{karte.karte_good}</p>
+                            {karte.karte_good && <p className="text-xs text-gray-600 line-clamp-2"><span className="font-bold">課題：</span>{karte.karte_good}</p>}
                           </div>
                         ) : (
-                          <p className="mt-2 text-xs text-gray-400 bg-gray-50 rounded-lg p-2">カルテ未作成</p>
+                          <p className="mt-2 text-xs text-gray-400 bg-gray-50 rounded-lg p-2">📋 カルテ未作成</p>
                         )}
                       </div>
 

@@ -38,6 +38,7 @@ export default function KarteInputPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [karteStatus, setKarteStatus] = useState<"none" | "draft" | "published">("none");
 
   const recognitionRef = useRef<any>(null);
 
@@ -53,6 +54,21 @@ export default function KarteInputPage() {
           setReservation(target || null);
         }
 
+        // DBのカルテを最優先で確認
+        const karteData = await fetch(`/api/admin/karte/${reservationId}`).then(r => r.json());
+        if (karteData.success && karteData.karte) {
+          const k = karteData.karte;
+          const parts: string[] = [];
+          if (k.karte_good) parts.push(`【課題】\n${k.karte_good}`);
+          if (k.karte_improve) parts.push(`【改善策】\n${k.karte_improve}`);
+          if (k.karte_homework) parts.push(`【練習方法】\n${k.karte_homework}`);
+          setAiResult(parts.join('\n\n'));
+          setVideoUrl(k.video_url || "");
+          setKarteStatus(k.is_draft ? "draft" : "published");
+          return;
+        }
+
+        // DBになければlocalStorageを確認
         const raw = localStorage.getItem(getDraftKey(reservationId));
         if (raw) {
           const draft: DraftData = JSON.parse(raw);
@@ -60,13 +76,6 @@ export default function KarteInputPage() {
           setAiResult(draft.aiResult || "");
           setVideoUrl(draft.videoUrl || "");
           setDraftSavedAt("一時保存データを復元しました");
-          return;
-        }
-
-        const karteData = await fetch(`/api/admin/karte/${reservationId}`).then(r => r.json());
-        if (karteData.success && karteData.karte) {
-          setAiResult(karteData.karte.karte_good || "");
-          setVideoUrl(karteData.karte.video_url || "");
         }
       } catch (err) {
         console.error("Load error:", err);
@@ -205,6 +214,12 @@ export default function KarteInputPage() {
           キャンセル
         </button>
       </header>
+
+      {karteStatus !== "none" && (
+        <div className={`border-b px-4 py-2 text-xs font-bold text-center ${karteStatus === "published" ? "bg-green-50 border-green-200 text-green-700" : "bg-orange-50 border-orange-200 text-orange-600"}`}>
+          {karteStatus === "published" ? "✅ このカルテは公開済みです" : "📝 このカルテは下書き保存中です"}
+        </div>
+      )}
 
       {draftSavedAt && (
         <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-700 text-center">

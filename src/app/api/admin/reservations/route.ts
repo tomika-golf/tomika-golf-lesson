@@ -21,7 +21,7 @@ export async function GET() {
 
     const { data: reservations, error: reservationsError } = await supabaseAdmin
       .from('reservations')
-      .select('*, profiles(name, name_kana, phone, ticket_man_to_man, ticket_group)')
+      .select('*, profiles(name, name_kana, phone, ticket_man_to_man, ticket_group), review_notes(id, is_draft)')
       .gte('start_time', cutoff)
       .order('start_time', { ascending: true });
 

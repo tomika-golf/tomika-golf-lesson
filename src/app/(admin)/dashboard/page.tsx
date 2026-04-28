@@ -19,6 +19,7 @@ type AdminReservation = {
     ticket_man_to_man: number;
     ticket_group: number;
   };
+  review_notes: { id: string; is_draft: boolean }[] | null;
 };
 
 export default function AdminDashboard() {
@@ -159,11 +160,17 @@ export default function AdminDashboard() {
                           </div>
                         ) : r.status === 'completed' ? (
                           <div className="w-full flex-col flex gap-2">
-                            <div className="w-full text-center py-2 bg-gray-100 text-gray-500 font-bold rounded-lg px-2 text-sm">
-                              受講済
-                            </div>
+                            {r.review_notes && r.review_notes.length > 0 ? (
+                              <div className={`w-full text-center py-1.5 rounded-lg px-2 text-xs font-bold ${r.review_notes[0].is_draft ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-700'}`}>
+                                {r.review_notes[0].is_draft ? '📝 下書き保存中' : '✅ カルテ公開済'}
+                              </div>
+                            ) : (
+                              <div className="w-full text-center py-1.5 bg-gray-100 text-gray-400 rounded-lg px-2 text-xs font-bold">
+                                📋 カルテ未作成
+                              </div>
+                            )}
                             <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-blue-600 text-white font-bold rounded-lg px-2 text-sm shadow hover:bg-blue-700 transition">
-                              📝 AIカルテを作成・編集
+                              {r.review_notes && r.review_notes.length > 0 ? '📝 カルテを確認・編集' : '📝 カルテを作成'}
                             </Link>
                           </div>
                         ) : (
