@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthContext } from "@/contexts/AuthContext";
+import AiChat from "@/components/AiChat";
 
 type Profile = {
   name: string;
@@ -141,6 +142,8 @@ export default function MyPage() {
         <div className="text-center py-4">
           <p className="text-xl font-bold text-gray-800">{profile.name} 様、こんにちは！</p>
         </div>
+
+        <AiChat accessToken={accessToken} />
 
         <section>
           <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-brand pb-1 flex items-center gap-2">

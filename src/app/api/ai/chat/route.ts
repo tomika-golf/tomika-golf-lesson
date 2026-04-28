@@ -1,0 +1,101 @@
+import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { CUSTOMER_CHAT_SYSTEM_PROMPT, formatKarteDataForPrompt } from '@/utils/ai-prompts';
+
+export const revalidate = 0;
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+export async function POST(request: Request) {
+  try {
+    const admin = createAdminClient();
+
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+
+    const { data: { user } } = await admin.auth.getUser(token);
+    if (!user) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+
+    const { message }: { message: string } = await request.json();
+    if (!message?.trim()) {
+      return NextResponse.json({ success: false, error: 'メッセージが必要です' }, { status: 400 });
+    }
+
+    // 完了済み予約を取得
+    const { data: reservations } = await admin
+      .from('reservations')
+      .select('id, start_time')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .order('start_time', { ascending: false });
+
+    let karteData: { id: string; date: string; good: string; improve: string; homework: string }[] = [];
+
+    if (reservations && reservations.length > 0) {
+      const reservationIds = reservations.map((r) => r.id);
+
+      const { data: notes } = await admin
+        .from('review_notes')
+        .select('id, karte_good, karte_improve, karte_homework, reservation_id')
+        .in('reservation_id', reservationIds)
+        .eq('is_draft', false);
+
+      if (notes && notes.length > 0) {
+        karteData = notes.map((note) => {
+          const reservation = reservations.find((r) => r.id === note.reservation_id);
+          const date = reservation
+            ? new Date(reservation.start_time).toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : '不明';
+          return {
+            id: note.reservation_id, // ページ遷移に使うのは reservation_id
+            date,
+            good: note.karte_good || '',
+            improve: note.karte_improve || '',
+            homework: note.karte_homework || '',
+          };
+        });
+      }
+    }
+
+    const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction,
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const result = await model.generateContent(message);
+    const responseText = result.response.text();
+
+    let parsed: {
+      answer: string;
+      referenced_kartes: { id: string; date: string; summary: string }[];
+      match_type: string;
+    };
+
+    try {
+      parsed = JSON.parse(responseText);
+    } catch {
+      parsed = { answer: responseText, referenced_kartes: [], match_type: 'none' };
+    }
+
+    return NextResponse.json({ success: true, ...parsed });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('AI Chat Error:', msg);
+    return NextResponse.json({ success: false, error: 'AIとの通信に失敗しました' }, { status: 500 });
+  }
+}
