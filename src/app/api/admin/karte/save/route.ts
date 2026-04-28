@@ -7,9 +7,9 @@ const supabaseAdmin = createClient(
 );
 
 function parseKarteSections(content: string) {
-  const goodMatch = content.match(/【今日の良かった点[^】]*】\s*([\s\S]*?)(?=【|$)/);
-  const improveMatch = content.match(/【改善のポイント[^】]*】\s*([\s\S]*?)(?=【|$)/);
-  const homeworkMatch = content.match(/【次回までの宿題[^】]*】\s*([\s\S]*?)(?=【|$)/);
+  const goodMatch = content.match(/【課題】\s*([\s\S]*?)(?=【|$)/);
+  const improveMatch = content.match(/【改善策】\s*([\s\S]*?)(?=【|$)/);
+  const homeworkMatch = content.match(/【練習方法】\s*([\s\S]*?)(?=【|$)/);
 
   return {
     good: goodMatch?.[1]?.trim() || content,
