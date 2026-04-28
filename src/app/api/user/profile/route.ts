@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       throw profileError;
     }
 
-    const { data: reservations, error: reservationsError } = await admin
+    const { data: allReservations, error: reservationsError } = await admin
       .from('reservations')
       .select('*')
       .eq('user_id', userId)
@@ -39,6 +39,12 @@ export async function GET(request: Request) {
     if (reservationsError) {
       throw reservationsError;
     }
+
+    // キャンセル済みはstart_timeから1日経過したら非表示
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const reservations = (allReservations || []).filter(r =>
+      r.status !== 'cancelled' || new Date(r.start_time) > cutoff
+    );
 
     return NextResponse.json({
       success: true,

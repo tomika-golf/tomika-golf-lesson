@@ -42,10 +42,14 @@ export async function GET(
       ? await admin.from('review_notes').select('*').in('reservation_id', ids)
       : { data: [] };
 
-    const reservations = (reservationsRes.data || []).map((r: any) => ({
-      ...r,
-      review_notes: (notes || []).filter((n: any) => n.reservation_id === r.id),
-    }));
+    // キャンセル済みはstart_timeから1日経過したら非表示
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const reservations = (reservationsRes.data || [])
+      .filter((r: any) => r.status !== 'cancelled' || new Date(r.start_time) > cutoff)
+      .map((r: any) => ({
+        ...r,
+        review_notes: (notes || []).filter((n: any) => n.reservation_id === r.id),
+      }));
 
     return NextResponse.json({
       success: true,
