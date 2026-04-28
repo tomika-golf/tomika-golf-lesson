@@ -58,11 +58,19 @@ export default function KarteInputPage() {
         const karteData = await fetch(`/api/admin/karte/${reservationId}`).then(r => r.json());
         if (karteData.success && karteData.karte) {
           const k = karteData.karte;
-          const parts: string[] = [];
-          if (k.karte_good) parts.push(`【課題】\n${k.karte_good}`);
-          if (k.karte_improve) parts.push(`【改善策】\n${k.karte_improve}`);
-          if (k.karte_homework) parts.push(`【練習方法】\n${k.karte_homework}`);
-          setAiResult(parts.join('\n\n'));
+          let text = '';
+          if (k.karte_improve || k.karte_homework) {
+            // 新形式：3フィールドから復元
+            const parts: string[] = [];
+            if (k.karte_good) parts.push(`【課題】\n${k.karte_good}`);
+            if (k.karte_improve) parts.push(`【改善策】\n${k.karte_improve}`);
+            if (k.karte_homework) parts.push(`【練習方法】\n${k.karte_homework}`);
+            text = parts.join('\n\n');
+          } else {
+            // 旧形式：karte_goodに全文が入っている
+            text = k.karte_good || '';
+          }
+          setAiResult(text);
           setVideoUrl(k.video_url || "");
           setKarteStatus(k.is_draft ? "draft" : "published");
           return;

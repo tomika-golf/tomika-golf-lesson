@@ -13,18 +13,22 @@ type AdminReservation = {
   status: "confirmed" | "completed" | "cancelled";
   options: string[];
   customer_memo: string;
-  profiles: {
-    name: string;
-    phone: string;
-    ticket_man_to_man: number;
-    ticket_group: number;
-  };
+  profiles: { name: string; phone: string };
   review_notes: { id: string; is_draft: boolean }[] | null;
+};
+
+type PendingKarte = {
+  id: string;
+  start_time: string;
+  lesson_type: "man-to-man" | "group";
+  has_draft: boolean;
+  profiles: { name: string };
 };
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
+  const [pendingKartes, setPendingKartes] = useState<PendingKarte[]>([]);
   const [loading, setLoading] = useState(true);
 
   const handleLogout = async () => {
@@ -34,11 +38,12 @@ export default function AdminDashboard() {
 
   const fetchReservations = async () => {
     try {
-      const res = await fetch("/api/admin/reservations");
-      const data = await res.json();
-      if (data.success) {
-        setReservations(data.reservations);
-      }
+      const [resData, pendingData] = await Promise.all([
+        fetch("/api/admin/reservations").then(r => r.json()),
+        fetch("/api/admin/karte/pending").then(r => r.json()),
+      ]);
+      if (resData.success) setReservations(resData.reservations);
+      if (pendingData.success) setPendingKartes(pendingData.pending);
     } catch (err) {
       console.error(err);
     } finally {
@@ -94,6 +99,36 @@ export default function AdminDashboard() {
       </header>
 
       <main className="p-4 max-w-4xl mx-auto space-y-6 mt-4">
+
+        {/* カルテ未作成・下書き一覧 */}
+        {pendingKartes.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-red-700 mb-4 border-b-2 border-red-300 pb-2 flex items-center gap-2">
+              📋 カルテ未完了 <span className="text-sm bg-red-600 text-white px-2 py-0.5 rounded-full">{pendingKartes.length}件</span>
+            </h2>
+            <div className="space-y-2">
+              {pendingKartes.map(p => (
+                <div key={p.id} className="bg-white rounded-xl border-l-4 border-red-400 shadow-sm p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-gray-800">{(p.profiles as any)?.name || '名称未設定'} 様</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(p.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
+                      {' '}({p.lesson_type === 'man-to-man' ? '50分' : '25分'})
+                    </p>
+                    {p.has_draft && <span className="text-xs text-orange-500 font-bold">📝 下書きあり</span>}
+                  </div>
+                  <Link
+                    href={`/dashboard/reservations/${p.id}/karte`}
+                    className="text-sm font-bold bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition"
+                  >
+                    {p.has_draft ? '編集・公開' : 'カルテを作成'}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* レッスン予定一覧 */}
         <section>
           <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">

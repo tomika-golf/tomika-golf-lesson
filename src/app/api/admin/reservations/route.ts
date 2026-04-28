@@ -21,15 +21,24 @@ export async function GET() {
 
     const { data: reservations, error: reservationsError } = await supabaseAdmin
       .from('reservations')
-      .select('*, profiles(name, name_kana, phone, ticket_man_to_man, ticket_group), review_notes(id, is_draft)')
+      .select('*, profiles(name, name_kana, phone, ticket_man_to_man, ticket_group)')
       .gte('start_time', cutoff)
       .order('start_time', { ascending: true });
 
-    if (reservationsError) {
-      throw reservationsError;
-    }
+    if (reservationsError) throw reservationsError;
 
-    return NextResponse.json({ success: true, reservations: reservations || [] });
+    // review_notesを別クエリで取得してマージ
+    const ids = (reservations || []).map((r: any) => r.id);
+    const { data: notes } = ids.length > 0
+      ? await supabaseAdmin.from('review_notes').select('id, reservation_id, is_draft').in('reservation_id', ids)
+      : { data: [] };
+
+    const merged = (reservations || []).map((r: any) => ({
+      ...r,
+      review_notes: (notes || []).filter((n: any) => n.reservation_id === r.id),
+    }));
+
+    return NextResponse.json({ success: true, reservations: merged });
   } catch (error: any) {
     console.error('Admin Fetch Error:', error);
     return NextResponse.json({ success: false, error: '予約情報の取得に失敗しました' }, { status: 500 });

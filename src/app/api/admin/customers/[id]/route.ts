@@ -30,20 +30,27 @@ export async function GET(
 
     const [profileRes, reservationsRes] = await Promise.all([
       admin.from('profiles').select('*').eq('id', id).single(),
-      admin
-        .from('reservations')
-        .select('*, review_notes(*)')
-        .eq('user_id', id)
-        .order('start_time', { ascending: false }),
+      admin.from('reservations').select('*').eq('user_id', id).order('start_time', { ascending: false }),
     ]);
 
     if (profileRes.error) throw profileRes.error;
     if (reservationsRes.error) throw reservationsRes.error;
 
+    // review_notesを別クエリで取得してマージ
+    const ids = (reservationsRes.data || []).map((r: any) => r.id);
+    const { data: notes } = ids.length > 0
+      ? await admin.from('review_notes').select('*').in('reservation_id', ids)
+      : { data: [] };
+
+    const reservations = (reservationsRes.data || []).map((r: any) => ({
+      ...r,
+      review_notes: (notes || []).filter((n: any) => n.reservation_id === r.id),
+    }));
+
     return NextResponse.json({
       success: true,
       profile: profileRes.data,
-      reservations: reservationsRes.data || [],
+      reservations,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
