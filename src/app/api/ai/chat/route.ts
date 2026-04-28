@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CUSTOMER_CHAT_SYSTEM_PROMPT, formatKarteDataForPrompt } from '@/utils/ai-prompts';
 
 export const revalidate = 0;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +27,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'メッセージが必要です' }, { status: 400 });
     }
 
-    // 完了済み予約を取得
     const { data: reservations } = await admin
       .from('reservations')
       .select('id, start_time')
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
               })
             : '不明';
           return {
-            id: note.reservation_id, // ページ遷移に使うのは reservation_id
+            id: note.reservation_id,
             date,
             good: note.karte_good || '',
             improve: note.karte_improve || '',
@@ -69,16 +68,14 @@ export async function POST(request: Request) {
 
     const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction,
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: systemInstruction,
+      messages: [{ role: 'user', content: message }],
     });
 
-    const result = await model.generateContent(message);
-    const responseText = result.response.text();
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
     let parsed: {
       answer: string;
