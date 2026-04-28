@@ -75,7 +75,8 @@ export async function POST(request: Request) {
       messages: [{ role: 'user', content: message }],
     });
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const responseText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
     let parsed: {
       answer: string;
