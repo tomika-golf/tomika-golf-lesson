@@ -18,6 +18,65 @@ function parseKarteSections(content: string) {
   };
 }
 
+async function sendLineKarteNotification(reservationId: string) {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) {
+    console.error('[LINE通知] LINE_CHANNEL_ACCESS_TOKEN が未設定です');
+    return;
+  }
+
+  const { data: reservation } = await supabaseAdmin
+    .from('reservations')
+    .select('user_id, start_time')
+    .eq('id', reservationId)
+    .single();
+
+  if (!reservation?.user_id) {
+    console.error('[LINE通知] 予約データが見つかりません reservationId:', reservationId);
+    return;
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('line_user_id, name')
+    .eq('id', reservation.user_id)
+    .single();
+
+  if (!profile?.line_user_id) {
+    console.error('[LINE通知] line_user_id が未登録です user_id:', reservation.user_id);
+    return;
+  }
+
+  const lessonDate = new Date(reservation.start_time).toLocaleDateString('ja-JP', {
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const res = await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      to: profile.line_user_id,
+      messages: [
+        {
+          type: 'text',
+          text: `📋 ${lessonDate}のレッスンカルテが公開されました！\n\nマイページからご確認いただけます。`,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error('[LINE通知] 送信失敗 status:', res.status, 'body:', body);
+  } else {
+    console.log('[LINE通知] 送信成功 to:', profile.line_user_id);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { reservationId, content, videoUrl, isDraft } = await request.json();
@@ -46,6 +105,13 @@ export async function POST(request: Request) {
     if (error) {
       console.error('Save Karte Error:', error);
       return NextResponse.json({ error: 'カルテの保存に失敗しました' }, { status: 500 });
+    }
+
+    // LINEプッシュ通知（公開時のみ、エラーは握りつぶしてカルテ保存は成功扱い）
+    if (!isDraft) {
+      sendLineKarteNotification(reservationId).catch(err =>
+        console.error('LINE notification error:', err)
+      );
     }
 
     return NextResponse.json({ success: true, data });

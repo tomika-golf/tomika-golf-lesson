@@ -69,6 +69,7 @@ export function useAuth() {
             body: JSON.stringify({
               lineId: liffProfile.userId,
               displayName: liffProfile.displayName,
+              idToken,
             }),
           });
           const json = await res.json();

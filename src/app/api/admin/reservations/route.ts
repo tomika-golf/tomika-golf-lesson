@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { startOfDay } from 'date-fns';
+
+// Vercelサーバーはタイムゾーンが UTC のため、日本時間（JST = UTC+9）で当日0時を計算する
+function startOfDayJST(): Date {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  jst.setUTCHours(0, 0, 0, 0);
+  return new Date(jst.getTime() - 9 * 60 * 60 * 1000);
+}
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +24,7 @@ export async function GET() {
 
     // 過去の予約も含む全てか、本日の始まり以降の予約だけにするか
     // ここでは運用しやすいように「昨日以降」の予約をざっくり全部取ってフロントで分けるアプローチ
-    const cutoff = startOfDay(new Date()).toISOString();
+    const cutoff = startOfDayJST().toISOString();
 
     const { data: reservations, error: reservationsError } = await supabaseAdmin
       .from('reservations')

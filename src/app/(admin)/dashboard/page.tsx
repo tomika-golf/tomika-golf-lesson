@@ -25,11 +25,18 @@ type PendingKarte = {
   profiles: { name: string };
 };
 
+function getAdminRole(): string {
+  if (typeof document === 'undefined') return 'full';
+  const match = document.cookie.match(/admin_role=([^;]+)/);
+  return match?.[1] ?? 'full';
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [pendingKartes, setPendingKartes] = useState<PendingKarte[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminRole, setAdminRole] = useState('full');
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -52,6 +59,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    setAdminRole(getAdminRole());
     fetchReservations();
   }, []);
 
@@ -100,8 +108,8 @@ export default function AdminDashboard() {
 
       <main className="p-4 max-w-4xl mx-auto space-y-6 mt-4">
 
-        {/* カルテ未作成・下書き一覧 */}
-        {pendingKartes.length > 0 && (
+        {/* カルテ未作成・下書き一覧（従業員には非表示） */}
+        {pendingKartes.length > 0 && adminRole !== 'staff' && (
           <section>
             <h2 className="text-xl font-bold text-red-700 mb-4 border-b-2 border-red-300 pb-2 flex items-center gap-2">
               📋 カルテ未完了 <span className="text-sm bg-red-600 text-white px-2 py-0.5 rounded-full">{pendingKartes.length}件</span>
@@ -174,15 +182,24 @@ export default function AdminDashboard() {
                       <div className="w-full">
                         {r.status === 'confirmed' ? (
                           <div className="flex flex-col gap-2">
-                            <button
-                              onClick={() => handleComplete(r)}
-                              className="w-full py-3 bg-accent text-white font-bold rounded-lg shadow hover:bg-orange-600 transition"
-                            >
-                              ✅ 受講完了
-                            </button>
-                            <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-200 transition">
-                              📝 カルテを準備する
-                            </Link>
+                            {adminRole !== 'staff' && (
+                              <>
+                                <button
+                                  onClick={() => handleComplete(r)}
+                                  className="w-full py-3 bg-accent text-white font-bold rounded-lg shadow hover:bg-orange-600 transition"
+                                >
+                                  ✅ 受講完了
+                                </button>
+                                <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-200 transition">
+                                  📝 カルテを準備する
+                                </Link>
+                              </>
+                            )}
+                            {adminRole === 'staff' && (
+                              <div className="w-full text-center py-2 bg-gray-50 text-gray-400 rounded-lg text-xs">
+                                確認のみ（操作権限なし）
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="w-full flex-col flex gap-2">
@@ -195,9 +212,11 @@ export default function AdminDashboard() {
                                 📋 カルテ未作成
                               </div>
                             )}
-                            <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-blue-600 text-white font-bold rounded-lg px-2 text-sm shadow hover:bg-blue-700 transition">
-                              {r.review_notes && r.review_notes.length > 0 ? '📝 カルテを確認・編集' : '📝 カルテを作成'}
-                            </Link>
+                            {adminRole !== 'staff' && (
+                              <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-blue-600 text-white font-bold rounded-lg px-2 text-sm shadow hover:bg-blue-700 transition">
+                                {r.review_notes && r.review_notes.length > 0 ? '📝 カルテを確認・編集' : '📝 カルテを作成'}
+                              </Link>
+                            )}
                           </div>
                         )}
                       </div>

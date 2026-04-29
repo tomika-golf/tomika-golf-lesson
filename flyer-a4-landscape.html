@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>富加ゴルフ レッスン広告（A4横）</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 297mm;
+      height: 210mm;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+      background: white;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .flyer {
+      width: 297mm;
+      height: 210mm;
+      display: flex;
+    }
+
+    /* ===== 左パネル（緑） ===== */
+    .left {
+      width: 108mm;
+      background: linear-gradient(160deg, #14532d 0%, #166534 50%, #15803d 100%);
+      color: white;
+      padding: 10mm 9mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .left::before {
+      content: '';
+      position: absolute;
+      top: -20mm;
+      right: -20mm;
+      width: 60mm;
+      height: 60mm;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+
+    .left::after {
+      content: '';
+      position: absolute;
+      bottom: -10mm;
+      left: -10mm;
+      width: 40mm;
+      height: 40mm;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+
+    .badge-may {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      font-size: 8pt;
+      font-weight: bold;
+      padding: 2mm 4mm;
+      border-radius: 50px;
+      margin-bottom: 3mm;
+    }
+
+    .left-title {
+      font-size: 8pt;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 2px;
+      margin-bottom: 2mm;
+    }
+
+    .left-heading {
+      font-size: 18pt;
+      font-weight: 900;
+      line-height: 1.3;
+      margin-bottom: 4mm;
+      color: white;
+    }
+
+    .left-catch {
+      font-size: 8pt;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.7;
+      padding-bottom: 5mm;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* 料金 */
+    .price-block {
+      padding: 5mm 0;
+    }
+
+    .price-label {
+      font-size: 7pt;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 2px;
+      margin-bottom: 3mm;
+    }
+
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3mm;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 3mm 4mm;
+    }
+
+    .price-row .plan {
+      font-size: 9pt;
+      font-weight: bold;
+      color: white;
+    }
+
+    .price-row .amount {
+      font-size: 16pt;
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+    }
+
+    .price-row .amount span {
+      font-size: 9pt;
+    }
+
+    .price-note {
+      font-size: 6.5pt;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+    }
+
+    /* QRコード */
+    .qr-block {
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+      background: white;
+      border-radius: 8px;
+      padding: 4mm;
+    }
+
+    .qr-placeholder {
+      width: 18mm;
+      height: 18mm;
+      background: #e5e7eb;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 5pt;
+      color: #9ca3af;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .qr-text {
+      flex: 1;
+    }
+
+    .qr-text p {
+      font-size: 7.5pt;
+      color: #166534;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+
+    .qr-text small {
+      font-size: 6pt;
+      color: #6b7280;
+    }
+
+    /* ===== 右パネル（白） ===== */
+    .right {
+      flex: 1;
+      background: white;
+      padding: 10mm 10mm 8mm 10mm;
+      display: flex;
+      flex-direction: column;
+      gap: 5mm;
+    }
+
+    /* 3つの強み */
+    .features {
+      display: flex;
+      gap: 3mm;
+    }
+
+    .feature-card {
+      flex: 1;
+      background: #f0fdf4;
+      border-radius: 6px;
+      padding: 4mm 4mm;
+      border-top: 3px solid #16a34a;
+    }
+
+    .feature-card .icon {
+      font-size: 14pt;
+      margin-bottom: 2mm;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 7.5pt;
+      font-weight: 900;
+      color: #14532d;
+      margin-bottom: 1.5mm;
+      line-height: 1.4;
+    }
+
+    .feature-card p {
+      font-size: 6.5pt;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    /* 区切り線 */
+    .divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* 下段：講師＋対象者＋アクセス */
+    .bottom {
+      display: flex;
+      gap: 4mm;
+      flex: 1;
+    }
+
+    /* 講師 */
+    .instructor {
+      flex: 1.2;
+      background: #f9fafb;
+      border-radius: 6px;
+      padding: 4mm;
+    }
+
+    .section-label {
+      font-size: 6pt;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #16a34a;
+      margin-bottom: 2mm;
+    }
+
+    .instructor-name {
+      font-size: 12pt;
+      font-weight: 900;
+      color: #111;
+      margin-bottom: 1mm;
+    }
+
+    .instructor-role {
+      font-size: 6.5pt;
+      color: #16a34a;
+      font-weight: bold;
+      margin-bottom: 2mm;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      border: 0.5px solid #bbf7d0;
+      border-radius: 50px;
+      padding: 0.5mm 3mm;
+      font-size: 6pt;
+      font-weight: bold;
+      margin: 0 1mm 1.5mm 0;
+    }
+
+    .instructor-desc {
+      font-size: 6.5pt;
+      color: #444;
+      line-height: 1.7;
+      margin-top: 2mm;
+    }
+
+    /* 対象者 */
+    .target {
+      flex: 1;
+      padding: 4mm;
+    }
+
+    .target ul {
+      list-style: none;
+      margin-top: 2mm;
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+    }
+
+    .target ul li {
+      font-size: 7pt;
+      color: #166534;
+      font-weight: bold;
+      background: #f0fdf4;
+      border-radius: 4px;
+      padding: 2mm 3mm;
+      line-height: 1.4;
+    }
+
+    /* アクセス */
+    .access {
+      flex: 1;
+      padding: 4mm;
+    }
+
+    .access-row {
+      display: flex;
+      gap: 2mm;
+      margin-bottom: 2.5mm;
+      align-items: flex-start;
+    }
+
+    .access-row .ico {
+      font-size: 9pt;
+      flex-shrink: 0;
+    }
+
+    .access-row .txt {
+      font-size: 6.5pt;
+      color: #444;
+      line-height: 1.7;
+    }
+
+    .access-row .txt strong {
+      display: block;
+      font-size: 8pt;
+      color: #111;
+      font-weight: 900;
+    }
+
+    /* 印刷プレビュー用（画面表示） */
+    @media screen {
+      body {
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        width: auto;
+        height: auto;
+        overflow: auto;
+      }
+
+      .flyer {
+        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+      }
+
+      .print-hint {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f2937;
+        color: white;
+        padding: 10px 24px;
+        border-radius: 50px;
+        font-size: 13px;
+        font-family: sans-serif;
+        pointer-events: none;
+      }
+    }
+
+    @media print {
+      .print-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="flyer">
+
+  <!-- 左パネル -->
+  <div class="left">
+
+    <div>
+      <div class="badge-may">🎉 5月限定キャンペーン</div>
+      <p class="left-title">TOMIKA GOLF LESSON</p>
+      <h1 class="left-heading">富加町・関市<br>美濃加茂市の<br>ゴルフレッスン</h1>
+      <p class="left-catch">
+        理論に基づいたワンポイント指導で<br>
+        あなたのスイングを根本から変える
+      </p>
+    </div>
+
+    <div class="price-block">
+      <p class="price-label">5月限定料金 PRICE</p>
+      <div class="price-row">
+        <span class="plan">25分レッスン</span>
+        <span class="amount">1,500<span>円</span></span>
+      </div>
+      <div class="price-row">
+        <span class="plan">50分レッスン</span>
+        <span class="amount">3,000<span>円</span></span>
+      </div>
+      <p class="price-note">
+        ※すべて税込　※ボール代は別途必要です<br>
+        ※6月以降は料金が変更となります
+      </p>
+    </div>
+
+    <div class="qr-block">
+      <div class="qr-placeholder">
+        QR<br>コード<br>をここに
+      </div>
+      <div class="qr-text">
+        <p>LINEで簡単予約</p>
+        <small>QRコードを読み込んで<br>予約カレンダーへ</small>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 右パネル -->
+  <div class="right">
+
+    <!-- 3つの強み -->
+    <div class="features">
+      <div class="feature-card">
+        <span class="icon">⛳</span>
+        <h3>練習場でそのまま受けられる</h3>
+        <p>富加ゴルフの練習場内でそのままレッスンを受けられるから、日常の練習のついでに気軽に参加できます。</p>
+      </div>
+      <div class="feature-card">
+        <span class="icon">📋</span>
+        <h3>あなた専用「AIカルテ」付き</h3>
+        <p>レッスン後に課題・改善策・練習方法をまとめた個別カルテをお届け。後からいつでも見返せます。</p>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🎯</span>
+        <h3>ワンポイントで劇的に変わる</h3>
+        <p>理論に基づいたアドバイスで、あなたの課題に絞ったワンポイント指導。スイングが劇的に変わります。</p>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 下段 -->
+    <div class="bottom">
+
+      <!-- 講師紹介 -->
+      <div class="instructor">
+        <p class="section-label">INSTRUCTOR</p>
+        <p class="instructor-name">松山 正直</p>
+        <p class="instructor-role">富加ゴルフ 支配人 / ゴルフプロ</p>
+        <span class="badge-tag">USGTF レベル2取得</span>
+        <span class="badge-tag">富加ゴルフ 支配人</span>
+        <p class="instructor-desc">
+          「理論がしっかりしている」「ワンポイントでスイングが劇的に変わった」
+          と受講者から好評。理論に基づいた丁寧な指導で、あなたの上達をサポートします。
+        </p>
+      </div>
+
+      <!-- こんな方に -->
+      <div class="target">
+        <p class="section-label">FOR YOU</p>
+        <ul>
+          <li>✅ ゴルフ初心者の方</li>
+          <li>✅ スコア90台で伸び悩む方</li>
+          <li>✅ 飛距離が落ちてきた方</li>
+          <li>✅ 基礎から見直したい方</li>
+        </ul>
+      </div>
+
+      <!-- アクセス -->
+      <div class="access">
+        <p class="section-label">ACCESS</p>
+        <div class="access-row">
+          <span class="ico">📍</span>
+          <div class="txt">
+            <strong>富加ゴルフ</strong>
+            岐阜県加茂郡富加町加治田260
+          </div>
+        </div>
+        <div class="access-row">
+          <span class="ico">🚗</span>
+          <div class="txt">
+            美濃加茂IC・富加関IC<br>より車で約5分
+          </div>
+        </div>
+        <div class="access-row">
+          <span class="ico">🅿️</span>
+          <div class="txt">敷地内 駐車場20台以上（無料）</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="print-hint">📄 Ctrl+P（Cmd+P）で印刷 → 用紙サイズ: A4 / 向き: 横</div>
+
+</body>
+</html>
