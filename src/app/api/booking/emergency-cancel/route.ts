@@ -29,14 +29,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '予約が見つかりません' }, { status: 404 });
     }
 
-    const adminLineUserId = process.env.ADMIN_LINE_USER_ID;
-    if (!adminLineUserId) {
-      return NextResponse.json({ error: 'ADMIN_LINE_USER_ID が未設定です' }, { status: 500 });
-    }
-
     const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     if (!lineToken) {
       return NextResponse.json({ error: 'LINE_CHANNEL_ACCESS_TOKEN が未設定です' }, { status: 500 });
+    }
+
+    // ADMIN_USER_IDS からSupabaseのUUIDを取得し、line_user_idを引く
+    const adminUserIds = (process.env.ADMIN_USER_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    if (adminUserIds.length === 0) {
+      return NextResponse.json({ error: 'ADMIN_USER_IDS が未設定です' }, { status: 500 });
+    }
+
+    const { data: adminProfiles } = await admin
+      .from('profiles')
+      .select('line_user_id')
+      .in('id', adminUserIds);
+
+    const adminLineUserIds = (adminProfiles ?? [])
+      .map(p => p.line_user_id)
+      .filter(Boolean) as string[];
+
+    if (adminLineUserIds.length === 0) {
+      return NextResponse.json({ error: '通知先のLINEユーザーIDが見つかりません' }, { status: 500 });
     }
 
     const lessonDate = new Date(reservation.start_time);
@@ -46,23 +60,28 @@ export async function POST(request: Request) {
 
     const message = `⚠️ 直前キャンセル申請\n\n${customerName} 様\n${lessonStr} ${timeStr}のレッスン\n\n管理画面から対応をお願いします。`;
 
-    const res = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${lineToken}`,
-      },
-      body: JSON.stringify({
-        to: adminLineUserId,
-        messages: [{ type: 'text', text: message }],
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      console.error('[緊急キャンセル通知] 送信失敗:', res.status, body);
-      return NextResponse.json({ error: 'LINE通知の送信に失敗しました' }, { status: 500 });
-    }
+    // 全管理者に並列送信
+    await Promise.all(
+      adminLineUserIds.map(lineUserId =>
+        fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${lineToken}`,
+          },
+          body: JSON.stringify({
+            to: lineUserId,
+            messages: [{ type: 'text', text: message }],
+          }),
+        }).then(res => {
+          if (!res.ok) {
+            res.text().then(body =>
+              console.error('[緊急キャンセル通知] 送信失敗:', lineUserId, res.status, body)
+            );
+          }
+        })
+      )
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
