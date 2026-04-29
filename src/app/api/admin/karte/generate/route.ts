@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { formatKarteInput, KARTE_SYSTEM_PROMPT } from '@/utils/ai-prompts';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -13,10 +14,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'メモが空です' }, { status: 400 });
     }
 
+    // DBからプロンプトを取得、なければデフォルトを使用
+    const admin = createAdminClient();
+    const { data: settings } = await admin.from('ai_settings').select('prompt_template').eq('id', 1).single();
+    const systemPrompt = settings?.prompt_template || KARTE_SYSTEM_PROMPT;
+
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: KARTE_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: 'user', content: formatKarteInput(safeNotes) }],
     });
 

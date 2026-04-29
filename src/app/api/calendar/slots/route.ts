@@ -24,8 +24,10 @@ export async function GET() {
     const timeMin = new Date().toISOString();
     const timeMax = addDays(new Date(), 60).toISOString();
 
-    // カレンダーイベントと既存予約を並行取得
-    const [calendarResponse, reservationsResult] = await Promise.all([
+    const adminClient = createAdminClient();
+
+    // カレンダーイベント・既存予約・休業日を並行取得
+    const [calendarResponse, reservationsResult, blockedResult] = await Promise.all([
       calendar.events.list({
         calendarId,
         timeMin,
@@ -33,20 +35,28 @@ export async function GET() {
         singleEvents: true,
         orderBy: 'startTime',
       }),
-      createAdminClient()
-        .from('reservations')
-        .select('start_time, end_time, lesson_type')
-        .eq('status', 'confirmed'),
+      adminClient.from('reservations').select('start_time, end_time, lesson_type').eq('status', 'confirmed'),
+      adminClient.from('blocked_dates').select('date'),
     ]);
+
+    const blockedDateSet = new Set(
+      (blockedResult.data || []).map(b => b.date)
+    );
 
     const items = calendarResponse.data.items || [];
     const existingReservations = reservationsResult.data || [];
     const now = new Date();
 
-    // すべての稼働ブロックから50分枠と25分枠を生成（既存予約で空き判定）
+    // すべての稼働ブロックから50分枠と25分枠を生成（既存予約・休業日で空き判定）
     const allSlots = items.flatMap(event => {
       const summary = event.summary || '';
       if (!isRelevantEvent(summary)) return [];
+
+      // 休業日チェック
+      const eventDate = event.start?.dateTime
+        ? new Date(event.start.dateTime).toISOString().slice(0, 10)
+        : event.start?.date;
+      if (eventDate && blockedDateSet.has(eventDate)) return [];
 
       const start = event.start?.dateTime ? new Date(event.start.dateTime) : null;
       const end = event.end?.dateTime ? new Date(event.end.dateTime) : null;

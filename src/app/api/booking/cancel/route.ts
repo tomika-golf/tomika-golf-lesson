@@ -4,7 +4,7 @@ import { differenceInHours } from 'date-fns';
 
 export async function POST(request: Request) {
   try {
-    const { reservationId } = await request.json();
+    const { reservationId, cancelReason } = await request.json();
 
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const { error: updateError } = await admin
       .from('reservations')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled', cancel_reason: cancelReason || null })
       .eq('id', reservationId);
 
     if (updateError) {

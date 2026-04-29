@@ -124,6 +124,26 @@ export async function POST(request: Request) {
 
     const isAlreadyPublished = existing && !existing.is_draft;
 
+    // 既存カルテがあれば履歴に保存
+    if (existing) {
+      const { data: currentKarte } = await supabaseAdmin
+        .from('review_notes')
+        .select('karte_good, karte_improve, karte_homework, video_url, is_draft')
+        .eq('reservation_id', reservationId)
+        .single();
+      if (currentKarte) {
+        await supabaseAdmin.from('review_notes_history').insert({
+          review_note_id: (await supabaseAdmin.from('review_notes').select('id').eq('reservation_id', reservationId).single()).data?.id,
+          karte_good: currentKarte.karte_good,
+          karte_improve: currentKarte.karte_improve,
+          karte_homework: currentKarte.karte_homework,
+          video_url: currentKarte.video_url,
+          is_draft: currentKarte.is_draft,
+          saved_by: adminUsername,
+        });
+      }
+    }
+
     const { good, improve, homework } = parseKarteSections(content);
 
     const { data, error } = await supabaseAdmin

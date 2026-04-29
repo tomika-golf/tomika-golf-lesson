@@ -60,9 +60,12 @@ export default function CustomerKartePage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+      <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex justify-between items-center print:hidden">
         <h1 className="text-xl font-bold">レッスンカルテ</h1>
-        <button onClick={() => router.back()} className="text-sm bg-green-800 px-3 py-1 rounded shadow">戻る</button>
+        <div className="flex gap-2">
+          <button onClick={() => window.print()} className="text-sm bg-white text-brand font-bold px-3 py-1 rounded shadow">🖨️ PDF保存</button>
+          <button onClick={() => router.back()} className="text-sm bg-green-800 px-3 py-1 rounded shadow">戻る</button>
+        </div>
       </header>
 
       <main className="p-4 max-w-2xl mx-auto mt-4 space-y-4">

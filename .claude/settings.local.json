@@ -15,7 +15,8 @@
       "Bash(git commit -m 'fix: useAuthのスコープエラー修正（json変数をsessionAccessTokenに変更） *)",
       "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('dependencies:', JSON.stringify\\(pkg.dependencies, null, 2\\)\\)\")",
       "Bash(gh run *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(git commit *)"
     ]
   }
 }

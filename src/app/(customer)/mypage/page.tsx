@@ -26,6 +26,7 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [emergencyTarget, setEmergencyTarget] = useState<Reservation | null>(null);
   const [emergencyLoading, setEmergencyLoading] = useState(false);
 
@@ -63,7 +64,7 @@ export default function MyPage() {
       const res = await fetch("/api/booking/cancel", {
         method: "POST",
         headers,
-        body: JSON.stringify({ reservationId: reservation.id }),
+        body: JSON.stringify({ reservationId: reservation.id, cancelReason }),
       });
       const data = await res.json();
       if (data.success) {
@@ -139,12 +140,27 @@ export default function MyPage() {
 
       {cancelTarget && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
-            <p className="font-bold text-gray-800 mb-1 text-center">予約をキャンセルしますか？</p>
-            <p className="text-xs text-gray-500 mb-6 text-center">キャンセル期限は開始の3時間前までです</p>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl space-y-4">
+            <p className="font-bold text-gray-800 text-center">予約をキャンセルしますか？</p>
+            <p className="text-xs text-gray-500 text-center">キャンセル期限は開始の3時間前までです</p>
+            <div>
+              <p className="text-xs font-bold text-gray-600 mb-1">キャンセル理由</p>
+              <select
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+              >
+                <option value="">選択してください</option>
+                <option value="体調不良">体調不良</option>
+                <option value="天気・天候">天気・天候</option>
+                <option value="仕事・用事">仕事・用事</option>
+                <option value="家族の都合">家族の都合</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
             <div className="flex gap-3">
-              <button onClick={() => setCancelTarget(null)} className="flex-1 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-600">戻る</button>
-              <button onClick={() => { executeCancel(cancelTarget); setCancelTarget(null); }} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold">キャンセルする</button>
+              <button onClick={() => { setCancelTarget(null); setCancelReason(''); }} className="flex-1 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-600">戻る</button>
+              <button onClick={() => { executeCancel(cancelTarget); setCancelTarget(null); setCancelReason(''); }} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold">キャンセルする</button>
             </div>
           </div>
         </div>

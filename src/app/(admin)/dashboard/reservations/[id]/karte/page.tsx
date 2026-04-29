@@ -39,6 +39,8 @@ export default function KarteInputPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [karteStatus, setKarteStatus] = useState<"none" | "draft" | "published">("none");
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
 
   const recognitionRef = useRef<any>(null);
 
@@ -168,6 +170,12 @@ export default function KarteInputPage() {
   const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setVideoFile(file);
+  };
+
+  const loadHistory = async () => {
+    const data = await fetch(`/api/admin/karte/${reservationId}/history`).then(r => r.json());
+    if (data.success) setHistory(data.history);
+    setShowHistory(true);
   };
 
   const handleSave = async (isDraft: boolean) => {
@@ -354,7 +362,50 @@ export default function KarteInputPage() {
             >
               下書きとして保存（お客様には非表示）
             </button>
+            {karteStatus !== "none" && (
+              <button onClick={loadHistory} className="w-full py-2 border-2 border-gray-300 text-gray-500 font-bold rounded-xl text-sm hover:bg-gray-50">
+                🕐 編集履歴を見る
+              </button>
+            )}
           </div>
+
+          {/* 編集履歴モーダル */}
+          {showHistory && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-5 w-full max-w-lg shadow-xl max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="font-black text-gray-800">🕐 編集履歴</p>
+                  <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-700 font-bold">✕</button>
+                </div>
+                <div className="overflow-y-auto space-y-3 flex-1">
+                  {history.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">履歴がありません</p>
+                  ) : history.map((h, i) => (
+                    <div key={h.id} className="border rounded-xl p-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-500">{new Date(h.saved_at).toLocaleString('ja-JP')}</p>
+                        {h.saved_by && <p className="text-xs text-gray-400">{h.saved_by}</p>}
+                      </div>
+                      {h.karte_good && <p className="text-xs text-gray-700 line-clamp-2"><span className="font-bold">課題：</span>{h.karte_good}</p>}
+                      <button
+                        onClick={() => {
+                          const parts: string[] = [];
+                          if (h.karte_good) parts.push(`【課題】\n${h.karte_good}`);
+                          if (h.karte_improve) parts.push(`【改善策】\n${h.karte_improve}`);
+                          if (h.karte_homework) parts.push(`【練習方法】\n${h.karte_homework}`);
+                          setAiResult(parts.join('\n\n'));
+                          setShowHistory(false);
+                        }}
+                        className="text-xs text-blue-600 font-bold hover:underline"
+                      >
+                        この内容を復元する
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         </section>
       </main>

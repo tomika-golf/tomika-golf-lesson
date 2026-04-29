@@ -210,6 +210,9 @@ export default function AdminDashboard() {
           <Link href="/dashboard/booking" className="bg-brand px-3 py-2 rounded shadow">📅 代理予約</Link>
           <Link href="/dashboard/operation-logs" className="bg-gray-500 px-3 py-2 rounded">🗒️ 操作ログ</Link>
           <Link href="/dashboard/summary" className="bg-indigo-600 px-3 py-2 rounded shadow">📊 月次サマリー</Link>
+          <Link href="/dashboard/blocked-dates" className="bg-gray-600 px-3 py-2 rounded">🚫 休業日</Link>
+          <Link href="/dashboard/line-broadcast" className="bg-green-700 px-3 py-2 rounded shadow">📢 LINE一斉送信</Link>
+          <Link href="/dashboard/ai-settings" className="bg-purple-700 px-3 py-2 rounded">🤖 AIプロンプト</Link>
           <button onClick={handleLogout} className="bg-red-700 px-3 py-2 rounded">ログアウト</button>
         </div>
       </header>
