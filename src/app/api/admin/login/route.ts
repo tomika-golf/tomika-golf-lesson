@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   const cookieOpts = {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 180 * 60, // 180分
     path: '/',
   };
   const res = NextResponse.json({ success: true });

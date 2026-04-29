@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAdminUsernameFromCookie } from '@/lib/admin-token';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,6 +108,7 @@ async function handleKarteNotification(reservationId: string, isEdit: boolean) {
 
 export async function POST(request: Request) {
   try {
+    const adminUsername = getAdminUsernameFromCookie(request.headers.get('cookie'));
     const { reservationId, content, videoUrl, isDraft } = await request.json();
 
     if (!reservationId) {
@@ -149,6 +151,14 @@ export async function POST(request: Request) {
         console.error('[LINE通知] エラー:', err)
       );
     }
+
+    // #15: 操作ログを記録
+    await supabaseAdmin.from('admin_operation_logs').insert({
+      admin_username: adminUsername,
+      action: isDraft ? 'karte_draft_saved' : (isAlreadyPublished ? 'karte_edited' : 'karte_published'),
+      target_id: reservationId,
+      detail: isDraft ? '下書き保存' : (isAlreadyPublished ? 'カルテ編集・再公開' : 'カルテ新規公開'),
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {

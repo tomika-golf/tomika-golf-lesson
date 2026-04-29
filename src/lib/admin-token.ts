@@ -1,5 +1,5 @@
 const ALGO = { name: 'HMAC', hash: 'SHA-256' } as const;
-const TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const TTL_MS = 180 * 60 * 1000; // 180分
 
 async function getKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
@@ -41,4 +41,18 @@ export async function getAdminTokenRole(token: string): Promise<string | null> {
 
 export async function verifyAdminToken(token: string): Promise<boolean> {
   return (await getAdminTokenRole(token)) !== null;
+}
+
+// リクエストのCookieからログイン中の管理者名を取得（ログ記録用）
+export function getAdminUsernameFromCookie(cookieHeader: string | null): string {
+  if (!cookieHeader) return 'unknown';
+  const match = cookieHeader.match(/admin_token=([^;]+)/);
+  if (!match) return 'unknown';
+  try {
+    const payload = match[1].split('.')[0];
+    const { u } = JSON.parse(atob(payload));
+    return u ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }

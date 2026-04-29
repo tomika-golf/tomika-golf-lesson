@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAdminUsernameFromCookie } from '@/lib/admin-token';
 
 function startOfDayJST(): Date {
   const now = new Date();
@@ -65,6 +66,14 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { reservationId, status } = await request.json();
+    const adminUsername = getAdminUsernameFromCookie(request.headers.get('cookie'));
+
+    // 変更前のステータスを取得
+    const { data: current } = await supabaseAdmin
+      .from('reservations')
+      .select('status')
+      .eq('id', reservationId)
+      .single();
 
     const { error: updateError } = await supabaseAdmin
       .from('reservations')
@@ -72,6 +81,24 @@ export async function PATCH(request: Request) {
       .eq('id', reservationId);
 
     if (updateError) throw updateError;
+
+    // #14: ステータス変更履歴を記録
+    if (current?.status && current.status !== status) {
+      await supabaseAdmin.from('reservation_status_logs').insert({
+        reservation_id: reservationId,
+        changed_by: adminUsername,
+        old_status: current.status,
+        new_status: status,
+      });
+    }
+
+    // #15: 操作ログを記録
+    await supabaseAdmin.from('admin_operation_logs').insert({
+      admin_username: adminUsername,
+      action: 'status_changed',
+      target_id: reservationId,
+      detail: `${current?.status ?? '?'} → ${status}`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
