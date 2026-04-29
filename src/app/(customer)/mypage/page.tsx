@@ -29,9 +29,6 @@ export default function MyPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [emergencyTarget, setEmergencyTarget] = useState<Reservation | null>(null);
   const [emergencyLoading, setEmergencyLoading] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [nameLoading, setNameLoading] = useState(false);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -103,32 +100,6 @@ export default function MyPage() {
 
   if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>;
   if (!profile) return <div className="p-8 text-center text-red-500">情報の取得に失敗しました。</div>;
-
-  const handleNameChange = async () => {
-    if (newName.trim().length < 2) return;
-    setNameLoading(true);
-    try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-      const res = await fetch("/api/user/name", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast("お名前を変更しました。");
-        setEditingName(false);
-        fetchProfile();
-      } else {
-        showToast(data.error || "変更に失敗しました。", false);
-      }
-    } catch {
-      showToast("通信エラーが発生しました。", false);
-    } finally {
-      setNameLoading(false);
-    }
-  };
 
   const executeEmergencyCancel = async (reservation: Reservation) => {
     setEmergencyLoading(true);
@@ -219,45 +190,9 @@ export default function MyPage() {
       </header>
 
       <main className="p-4 max-w-2xl mx-auto space-y-6">
-        {/* 受講回数表示・名前変更 */}
+        {/* 受講回数表示 */}
         <div className="text-center py-4">
-          {editingName ? (
-            <div className="flex flex-col items-center gap-3">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="新しいお名前を入力"
-                className="border-2 border-gray-300 rounded-xl px-4 py-2 text-base text-center focus:outline-none focus:border-green-500 w-56"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setEditingName(false); setNewName(''); }}
-                  className="px-4 py-2 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-600"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleNameChange}
-                  disabled={nameLoading || newName.trim().length < 2}
-                  className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                >
-                  {nameLoading ? "変更中..." : "変更する"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-xl font-bold text-gray-800">{profile.name} 様、こんにちは！</p>
-              <button
-                onClick={() => { setEditingName(true); setNewName(profile.name); }}
-                className="text-xs text-gray-400 underline"
-              >
-                名前を変更する
-              </button>
-            </div>
-          )}
+          <p className="text-xl font-bold text-gray-800">{profile.name} 様、こんにちは！</p>
           {completedCount > 0 && (
             <p className="text-sm text-brand font-bold mt-1">⛳ 受講回数：{completedCount}回</p>
           )}

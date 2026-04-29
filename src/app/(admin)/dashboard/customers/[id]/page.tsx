@@ -50,6 +50,9 @@ export default function CustomerDetailPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminRole, setAdminRole] = useState('full');
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [nameLoading, setNameLoading] = useState(false);
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -67,6 +70,29 @@ export default function CustomerDetailPage() {
     setAdminRole(getAdminRole());
     fetchData();
   }, [customerId]);
+
+  const handleNameSave = async () => {
+    if (newName.trim().length < 2) return;
+    setNameLoading(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingName(false);
+        fetchData();
+      } else {
+        alert("エラー: " + data.error);
+      }
+    } catch {
+      alert("通信エラーが発生しました。");
+    } finally {
+      setNameLoading(false);
+    }
+  };
 
   const handleComplete = async (r: Reservation) => {
     if (!window.confirm(`このレッスンを受講済みとして処理し、カルテ作成ページへ移動します。よろしいですか？`)) return;
@@ -150,7 +176,40 @@ export default function CustomerDetailPage() {
       <header className="bg-gray-800 text-white px-6 py-4 sticky top-0 z-10 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/customers" className="text-gray-400 hover:text-white text-sm">← 一覧</Link>
-          <h1 className="text-xl font-bold">{profile.name} 様</h1>
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="bg-gray-700 text-white border border-gray-500 rounded-lg px-2 py-1 text-base w-36 focus:outline-none focus:border-white"
+                autoFocus
+              />
+              <button
+                onClick={handleNameSave}
+                disabled={nameLoading || newName.trim().length < 2}
+                className="text-xs bg-green-500 hover:bg-green-600 px-3 py-1 rounded-lg font-bold disabled:opacity-50"
+              >
+                {nameLoading ? "..." : "保存"}
+              </button>
+              <button
+                onClick={() => { setEditingName(false); setNewName(''); }}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1"
+              >
+                取消
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">{profile.name} 様</h1>
+              <button
+                onClick={() => { setEditingName(true); setNewName(profile.name); }}
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2 py-0.5 rounded"
+              >
+                名前を修正
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
