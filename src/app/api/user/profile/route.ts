@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('*')
+      .select('id, name, name_kana, phone, ticket_man_to_man, ticket_group, created_at')
       .eq('id', userId)
       .single();
 

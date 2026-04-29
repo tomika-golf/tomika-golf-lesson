@@ -24,6 +24,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'reservationId is required' }, { status: 400 });
     }
 
+    // 予約がログインユーザー本人のものか確認してからカルテを取得
+    const { data: reservation } = await admin
+      .from('reservations')
+      .select('user_id')
+      .eq('id', reservationId)
+      .single();
+
+    if (!reservation || reservation.user_id !== user.id) {
+      return NextResponse.json({ success: false, error: 'カルテが見つかりません' }, { status: 404 });
+    }
+
     const { data, error } = await admin
       .from('review_notes')
       .select('karte_good, karte_improve, karte_homework, is_draft, reservations(start_time, lesson_type)')
