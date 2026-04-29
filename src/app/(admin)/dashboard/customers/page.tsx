@@ -8,8 +8,6 @@ type Customer = {
   name: string;
   name_kana: string | null;
   phone: string | null;
-  ticket_man_to_man: number;
-  ticket_group: number;
   admin_memo: string | null;
 };
 
@@ -17,15 +15,32 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingMemo, setEditingMemo] = useState<{ id: string; value: string } | null>(null);
+  const [savingMemo, setSavingMemo] = useState(false);
 
-  useEffect(() => {
+  const fetchCustomers = () => {
     fetch("/api/admin/customers")
       .then(r => r.json())
-      .then(data => {
-        if (data.success) setCustomers(data.customers);
-      })
+      .then(data => { if (data.success) setCustomers(data.customers); })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchCustomers(); }, []);
+
+  const saveMemo = async (customerId: string, memo: string) => {
+    setSavingMemo(true);
+    try {
+      await fetch(`/api/admin/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_memo: memo }),
+      });
+      setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, admin_memo: memo || null } : c));
+      setEditingMemo(null);
+    } finally {
+      setSavingMemo(false);
+    }
+  };
 
   const filtered = customers.filter(c => {
     const q = search.trim().toLowerCase();
@@ -47,6 +62,31 @@ export default function CustomersPage() {
         <span className="text-sm text-gray-400">{customers.length}名</span>
       </header>
 
+      {/* #9: メモ編集モーダル */}
+      {editingMemo && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <p className="font-bold text-gray-800">管理メモを編集</p>
+            <textarea
+              value={editingMemo.value}
+              onChange={e => setEditingMemo({ ...editingMemo, value: e.target.value })}
+              className="w-full border rounded-xl px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
+              placeholder="メモを入力..."
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setEditingMemo(null)} className="flex-1 py-2 border-2 border-gray-300 rounded-xl font-bold text-gray-600 text-sm">キャンセル</button>
+              <button
+                onClick={() => saveMemo(editingMemo.id, editingMemo.value)}
+                disabled={savingMemo}
+                className="flex-1 py-2 bg-gray-800 text-white rounded-xl font-bold text-sm disabled:opacity-50"
+              >
+                {savingMemo ? "保存中..." : "保存"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="p-4 max-w-3xl mx-auto space-y-4 mt-4">
         <input
           type="text"
@@ -65,27 +105,30 @@ export default function CustomersPage() {
         ) : (
           <div className="space-y-3">
             {filtered.map(c => (
-              <Link
-                key={c.id}
-                href={`/dashboard/customers/${c.id}`}
-                className="block bg-white rounded-xl border shadow-sm p-4 hover:border-gray-400 transition"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
+              <div key={c.id} className="bg-white rounded-xl border shadow-sm p-4 hover:border-gray-300 transition">
+                <div className="flex justify-between items-start gap-2">
+                  <Link href={`/dashboard/customers/${c.id}`} className="flex-1 min-w-0">
                     <p className="font-black text-lg text-gray-800">{c.name} 様</p>
                     {c.name_kana && <p className="text-xs text-gray-400">{c.name_kana}</p>}
                     {c.phone && <p className="text-sm text-gray-500 mt-1">📞 {c.phone}</p>}
                     {c.admin_memo && (
-                      <p className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mt-2">
+                      <p className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mt-2 line-clamp-1">
                         📌 {c.admin_memo}
                       </p>
                     )}
-                  </div>
-                  <div className="text-right ml-4 shrink-0">
-                    <p className="text-xs text-blue-600 font-bold">カルテを見る →</p>
+                  </Link>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <Link href={`/dashboard/customers/${c.id}`} className="text-xs text-blue-600 font-bold">カルテを見る →</Link>
+                    {/* #9: メモ編集ボタン */}
+                    <button
+                      onClick={() => setEditingMemo({ id: c.id, value: c.admin_memo ?? "" })}
+                      className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition"
+                    >
+                      ✏️ メモ編集
+                    </button>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

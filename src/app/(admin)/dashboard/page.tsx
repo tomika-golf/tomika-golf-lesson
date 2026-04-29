@@ -130,6 +130,7 @@ export default function AdminDashboard() {
           <Link href="/dashboard/ghost-account" className="bg-gray-600 px-3 py-2 rounded">👻 ゴースト作成</Link>
           <Link href="/dashboard/booking" className="bg-brand px-3 py-2 rounded shadow">📅 代理予約</Link>
           <Link href="/dashboard/operation-logs" className="bg-gray-500 px-3 py-2 rounded">🗒️ 操作ログ</Link>
+          <Link href="/dashboard/summary" className="bg-indigo-600 px-3 py-2 rounded shadow">📊 月次サマリー</Link>
           <button onClick={handleLogout} className="bg-red-700 px-3 py-2 rounded">ログアウト</button>
         </div>
       </header>

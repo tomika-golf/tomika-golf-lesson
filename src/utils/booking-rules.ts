@@ -1,10 +1,7 @@
 export type CheckBookingRulesParams = {
   lessonType: 'man-to-man' | 'group';
   isOverride?: boolean;
-  userProfile: {
-    ticket_man_to_man: number;
-    ticket_group: number;
-  } | null;
+  userProfile: Record<string, unknown> | null;
   userReservations: {
     status: string;
     lesson_type: string;

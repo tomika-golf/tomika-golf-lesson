@@ -2,6 +2,60 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkBookingRules } from '@/utils/booking-rules';
 
+// 予約作成時にLINEリマインダーをキューに登録
+async function queueReminders(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  startTime: string
+) {
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('line_user_id')
+    .eq('id', userId)
+    .single();
+
+  if (!profile?.line_user_id) return;
+
+  const lessonDate = new Date(startTime);
+  const lessonStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
+  const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
+
+  // JST日付ベースで前日・当日の8時JST（= 23時UTC）を計算
+  const lessonJST = new Date(lessonDate.getTime() + 9 * 60 * 60 * 1000);
+
+  const prevDay = new Date(lessonJST);
+  prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+  prevDay.setUTCHours(8, 0, 0, 0);
+  const prevDayReminder = new Date(prevDay.getTime() - 9 * 60 * 60 * 1000);
+
+  const sameDay = new Date(lessonJST);
+  sameDay.setUTCHours(8, 0, 0, 0);
+  const sameDayReminder = new Date(sameDay.getTime() - 9 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const toInsert = [];
+
+  if (prevDayReminder > now) {
+    toInsert.push({
+      line_user_id: profile.line_user_id,
+      message: `📅 明日のレッスンのお知らせ\n${lessonStr} ${timeStr}のレッスンが予定されています。\nお気をつけてお越しください！`,
+      scheduled_at: prevDayReminder.toISOString(),
+    });
+  }
+
+  if (sameDayReminder > now) {
+    toInsert.push({
+      line_user_id: profile.line_user_id,
+      message: `⛳ 本日のレッスンのお知らせ\n${lessonStr} ${timeStr}のレッスンが本日あります。\nお気をつけてお越しください！`,
+      scheduled_at: sameDayReminder.toISOString(),
+    });
+  }
+
+  if (toInsert.length > 0) {
+    await admin.from('line_notification_queue').insert(toInsert);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -24,31 +78,27 @@ export async function POST(request: Request) {
     const userId = user.id;
 
     const [profileResult, reservationsResult] = await Promise.all([
-      admin.from('profiles').select('ticket_man_to_man, ticket_group').eq('id', userId).single(),
+      admin.from('profiles').select('id').eq('id', userId).single(),
       admin.from('reservations').select('status, lesson_type').eq('user_id', userId),
     ]);
 
-    // プロフィールがない場合は自動作成（reservations.user_id FK → profiles.id）
+    // プロフィールがない場合は自動作成
     if (!profileResult.data) {
       const { error: profileUpsertError } = await admin.from('profiles').upsert({
         id: userId,
         name: 'ゲスト',
-        ticket_man_to_man: 0,
-        ticket_group: 0,
       }, { onConflict: 'id' });
       if (profileUpsertError) {
-        console.error('Profile upsert error:', profileUpsertError);
         return NextResponse.json({ success: false, error: `プロフィール作成失敗: ${profileUpsertError.message}` }, { status: 500 });
       }
     }
 
-    const userProfile = profileResult.data || { ticket_man_to_man: 0, ticket_group: 0 };
     const userReservations = reservationsResult.data || [];
 
     const ruleCheck = checkBookingRules({
       lessonType,
       isOverride: false,
-      userProfile,
+      userProfile: {},
       userReservations,
     });
 
@@ -56,7 +106,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: ruleCheck.errorMessage }, { status: 400 });
     }
 
-    // ダブルブッキング防止：同時間帯にconfirmedな予約が存在しないか確認
+    // ダブルブッキング防止
     const { data: conflicting, error: conflictError } = await admin
       .from('reservations')
       .select('id')
@@ -66,7 +116,6 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (conflictError) {
-      console.error('Conflict check error:', conflictError);
       return NextResponse.json({ success: false, error: '予約確認中にエラーが発生しました' }, { status: 500 });
     }
 
@@ -89,14 +138,17 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Database Error:', error);
       return NextResponse.json({ success: false, error: `予約の保存に失敗しました: ${error.message}` }, { status: 500 });
     }
+
+    // #2: リマインダーをキューに登録（失敗しても予約は成功とする）
+    queueReminders(admin, userId, startTime).catch(err =>
+      console.error('[リマインダー登録] エラー:', err)
+    );
 
     return NextResponse.json({ success: true, reservation: data });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Booking API Error:', msg);
     return NextResponse.json({ success: false, error: '予期せぬエラーが発生しました' }, { status: 500 });
   }
 }
