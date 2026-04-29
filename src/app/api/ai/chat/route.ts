@@ -5,10 +5,14 @@ import { CUSTOMER_CHAT_SYSTEM_PROMPT, formatKarteDataForPrompt } from '@/utils/a
 
 export const revalidate = 0;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
 export async function POST(request: Request) {
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    console.log('GEMINI_API_KEY length:', apiKey?.length ?? 'undefined');
+    if (!apiKey) {
+      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY が設定されていません' }, { status: 500 });
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
     const admin = createAdminClient();
 
     const authHeader = request.headers.get('Authorization');
