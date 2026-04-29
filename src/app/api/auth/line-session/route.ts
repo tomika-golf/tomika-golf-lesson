@@ -14,20 +14,22 @@ function buildCredentials(lineId: string) {
 }
 
 // LINE IDトークンをLINE公式APIで署名検証し、subがlineIdと一致するか確認する
-async function verifyLineIdToken(idToken: string, lineId: string): Promise<boolean> {
+async function verifyLineIdToken(idToken: string, lineId: string): Promise<{ ok: boolean; reason: string }> {
   const channelId = process.env.LINE_CHANNEL_ID;
-  if (!channelId) return false;
+  if (!channelId) return { ok: false, reason: 'LINE_CHANNEL_ID未設定' };
   try {
     const res = await fetch('https://api.line.me/oauth2/v2.1/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ id_token: idToken, client_id: channelId }),
     });
-    if (!res.ok) return false;
     const data = await res.json();
-    return data.sub === lineId;
-  } catch {
-    return false;
+    console.log('[LINE verify] status:', res.status, 'body:', JSON.stringify(data), 'channelId:', channelId, 'sub:', data.sub, 'lineId:', lineId);
+    if (!res.ok) return { ok: false, reason: `LINE API ${res.status}: ${data.error_description ?? data.error ?? JSON.stringify(data)}` };
+    if (data.sub !== lineId) return { ok: false, reason: `sub不一致 sub=${data.sub} lineId=${lineId}` };
+    return { ok: true, reason: 'ok' };
+  } catch (e) {
+    return { ok: false, reason: String(e) };
   }
 }
 
@@ -41,9 +43,10 @@ export async function POST(request: Request) {
 
     // IDトークンが送られてきた場合はLINE公式APIで署名検証する
     if (idToken) {
-      const valid = await verifyLineIdToken(idToken, lineId);
-      if (!valid) {
-        return NextResponse.json({ error: 'LINE認証トークンの検証に失敗しました' }, { status: 401 });
+      const { ok, reason } = await verifyLineIdToken(idToken, lineId);
+      if (!ok) {
+        console.error('[LINE verify] 失敗:', reason);
+        return NextResponse.json({ error: `LINE認証トークンの検証に失敗しました: ${reason}` }, { status: 401 });
       }
     }
 
