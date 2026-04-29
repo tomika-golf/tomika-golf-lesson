@@ -14,6 +14,7 @@ type ReviewNote = {
 
 type Reservation = {
   id: string;
+  user_id: string;
   start_time: string;
   end_time: string;
   lesson_type: "man-to-man" | "group";
@@ -36,6 +37,12 @@ function lessonLabel(type: "man-to-man" | "group") {
   return type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）";
 }
 
+function getAdminRole(): string {
+  if (typeof document === 'undefined') return 'full';
+  const match = document.cookie.match(/admin_role=([^;]+)/);
+  return match?.[1] ?? 'full';
+}
+
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -44,6 +51,7 @@ export default function CustomerDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminRole, setAdminRole] = useState('full');
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -57,7 +65,53 @@ export default function CustomerDetailPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchData(); }, [customerId]);
+  useEffect(() => {
+    setAdminRole(getAdminRole());
+    fetchData();
+  }, [customerId]);
+
+  const handleComplete = async (r: Reservation) => {
+    if (!window.confirm(`このレッスンを受講済みとして処理し、カルテ作成ページへ移動します。よろしいですか？`)) return;
+    try {
+      const response = await fetch("/api/admin/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationId: r.id,
+          status: "completed",
+          userId: r.user_id,
+          lessonType: r.lesson_type,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        router.push(`/dashboard/reservations/${r.id}/karte`);
+      } else {
+        alert("エラー: " + data.error);
+      }
+    } catch {
+      alert("通信エラーが発生しました。");
+    }
+  };
+
+  const handleAbsent = async (r: Reservation) => {
+    if (!window.confirm(`このレッスンを欠席・無断キャンセルとして処理します。チケットは消費されません。よろしいですか？`)) return;
+    try {
+      const response = await fetch("/api/admin/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservationId: r.id, status: "cancelled" }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchData();
+      } else {
+        alert("エラー: " + data.error);
+      }
+    } catch {
+      alert("通信エラーが発生しました。");
+    }
+  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -69,8 +123,10 @@ export default function CustomerDetailPage() {
   if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>;
   if (!profile) return <div className="p-8 text-center text-red-500">データが見つかりません。</div>;
 
+  const now = new Date();
   const completed = reservations.filter(r => r.status === "completed");
-  const upcoming = reservations.filter(r => r.status === "confirmed");
+  const overdue = reservations.filter(r => r.status === "confirmed" && new Date(r.end_time) < now);
+  const upcoming = reservations.filter(r => r.status === "confirmed" && new Date(r.end_time) >= now);
   const cancelled = reservations.filter(r => r.status === "cancelled");
 
   return (
@@ -96,7 +152,49 @@ export default function CustomerDetailPage() {
           )}
         </section>
 
-        {/* 予約中のレッスン */}
+        {/* 対応待ち：期日超過の未処理予約 */}
+        {overdue.length > 0 && (
+          <section>
+            <h2 className="text-lg font-bold text-orange-700 mb-3 border-b-2 border-orange-300 pb-1 flex items-center gap-2">
+              ⚠️ 対応待ち
+              <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">{overdue.length}件</span>
+            </h2>
+            <div className="space-y-3">
+              {overdue.map(r => (
+                <div key={r.id} className="bg-orange-50 rounded-xl border-l-4 border-orange-400 shadow-sm p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded inline-block mb-1 ${r.lesson_type === "man-to-man" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-600"}`}>
+                        {lessonLabel(r.lesson_type)}
+                      </span>
+                      <p className="font-bold text-gray-800">{formatDate(r.start_time)}</p>
+                    </div>
+                    {adminRole !== 'staff' ? (
+                      <div className="flex flex-col gap-2 min-w-[160px]">
+                        <button
+                          onClick={() => handleComplete(r)}
+                          className="w-full py-2 bg-green-600 text-white font-bold rounded-lg shadow text-sm hover:bg-green-700 transition"
+                        >
+                          ✅ 受講した → カルテ作成へ
+                        </button>
+                        <button
+                          onClick={() => handleAbsent(r)}
+                          className="w-full py-2 bg-gray-200 text-gray-600 font-bold rounded-lg text-xs hover:bg-gray-300 transition"
+                        >
+                          ❌ 欠席・無断キャンセル
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">確認のみ</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 予約中のレッスン（期日未来のもの） */}
         {upcoming.length > 0 && (
           <section>
             <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-1">📅 予約中</h2>
