@@ -289,9 +289,13 @@ export default function Home() {
       </section>
 
       {/* フッター */}
-      <footer className="bg-gray-900 text-white text-center py-6 text-xs text-gray-400">
+      <footer className="bg-gray-900 text-white text-center py-8 text-xs text-gray-400">
         <p>⛳ 富加ゴルフ / 岐阜県加茂郡富加町加治田260</p>
-        <p className="mt-1">© 2026 Tomika Golf. All rights reserved.</p>
+        <div className="flex justify-center gap-6 mt-3">
+          <Link href="/privacy" className="hover:text-white underline transition-colors">プライバシーポリシー</Link>
+          <Link href="/terms" className="hover:text-white underline transition-colors">利用規約</Link>
+        </div>
+        <p className="mt-3">© 2026 Tomika Golf. All rights reserved.</p>
       </footer>
     </div>
   );

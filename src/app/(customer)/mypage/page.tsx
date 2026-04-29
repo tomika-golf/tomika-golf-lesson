@@ -203,6 +203,13 @@ export default function MyPage() {
             </div>
           )}
         </section>
+
+        <footer className="mt-12 pb-8 text-center text-xs text-gray-400">
+          <div className="flex justify-center gap-4">
+            <Link href="/privacy" className="underline hover:text-gray-600">プライバシーポリシー</Link>
+            <Link href="/terms" className="underline hover:text-gray-600">利用規約</Link>
+          </div>
+        </footer>
       </main>
     </div>
   );
