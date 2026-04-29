@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CUSTOMER_CHAT_SYSTEM_PROMPT, formatKarteDataForPrompt } from '@/utils/ai-prompts';
 
 export const revalidate = 0;
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: Request) {
   try {
@@ -68,15 +68,13 @@ export async function POST(request: Request) {
 
     const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: systemInstruction,
-      messages: [{ role: 'user', content: message }],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction,
     });
 
-    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
-    const responseText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    const result = await model.generateContent(message);
+    const rawText = result.response.text().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
     let parsed: {
       answer: string;
@@ -85,9 +83,9 @@ export async function POST(request: Request) {
     };
 
     try {
-      parsed = JSON.parse(responseText);
+      parsed = JSON.parse(rawText);
     } catch {
-      parsed = { answer: responseText, referenced_kartes: [], match_type: 'none' };
+      parsed = { answer: rawText, referenced_kartes: [], match_type: 'none' };
     }
 
     return NextResponse.json({ success: true, ...parsed });
