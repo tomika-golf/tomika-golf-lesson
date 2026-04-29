@@ -39,8 +39,6 @@ export async function POST(request: Request) {
         id: userId,
         line_user_id: lineId,
         name: null,
-        ticket_man_to_man: 0,
-        ticket_group: 0,
       });
       if (error) {
         console.error('Profile Insert Error:', error);

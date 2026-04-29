@@ -8,8 +8,6 @@ type Customer = {
   id: string;
   name: string;
   name_kana: string | null;
-  ticket_man_to_man: number;
-  ticket_group: number;
 };
 
 type Slot = {
@@ -138,9 +136,6 @@ export default function AdminBookingPage() {
               >
                 <span className="font-bold text-gray-800">{c.name}</span>
                 {c.name_kana && <span className="text-xs text-gray-400 ml-2">{c.name_kana}</span>}
-                <span className="float-right text-xs text-gray-500">
-                  50分 {c.ticket_man_to_man}枚 / 25分 {c.ticket_group}枚
-                </span>
               </button>
             ))}
           </div>

@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('id, name, name_kana, phone, ticket_man_to_man, ticket_group, created_at')
+      .select('id, name, name_kana, phone, created_at')
       .eq('id', userId)
       .single();
 
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      profile: profile || { ticket_man_to_man: 0, ticket_group: 0, name: 'ゲスト' },
+      profile: profile || { name: 'ゲスト' },
       reservations: reservations || [],
     });
   } catch (error: unknown) {
