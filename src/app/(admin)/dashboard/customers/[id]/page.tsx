@@ -28,8 +28,6 @@ type Profile = {
   name: string;
   name_kana: string | null;
   phone: string | null;
-  ticket_man_to_man: number;
-  ticket_group: number;
   admin_memo: string | null;
 };
 
@@ -76,12 +74,7 @@ export default function CustomerDetailPage() {
       const response = await fetch("/api/admin/reservations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationId: r.id,
-          status: "completed",
-          userId: r.user_id,
-          lessonType: r.lesson_type,
-        }),
+        body: JSON.stringify({ reservationId: r.id, status: "completed" }),
       });
       const data = await response.json();
       if (data.success) {
@@ -95,7 +88,7 @@ export default function CustomerDetailPage() {
   };
 
   const handleAbsent = async (r: Reservation) => {
-    if (!window.confirm(`このレッスンを欠席・無断キャンセルとして処理します。チケットは消費されません。よろしいですか？`)) return;
+    if (!window.confirm(`このレッスンを欠席・無断キャンセルとして処理します。よろしいですか？`)) return;
     try {
       const response = await fetch("/api/admin/reservations", {
         method: "PATCH",
@@ -103,8 +96,31 @@ export default function CustomerDetailPage() {
         body: JSON.stringify({ reservationId: r.id, status: "cancelled" }),
       });
       const data = await response.json();
+      if (data.success) fetchData();
+      else alert("エラー: " + data.error);
+    } catch {
+      alert("通信エラーが発生しました。");
+    }
+  };
+
+  // #7: ステータス修正（完了↔キャンセルの事後変更）
+  const handleCorrectStatus = async (r: Reservation, newStatus: "completed" | "cancelled") => {
+    const label = newStatus === "completed" ? "受講済みに修正" : "欠席・キャンセルに修正";
+    const note = newStatus === "completed" ? "カルテ作成ページへ移動します。" : "受講記録は残りません。";
+    if (!window.confirm(`ステータスを「${label}」に変更します。${note}\nよろしいですか？`)) return;
+    try {
+      const response = await fetch("/api/admin/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservationId: r.id, status: newStatus }),
+      });
+      const data = await response.json();
       if (data.success) {
-        fetchData();
+        if (newStatus === "completed") {
+          router.push(`/dashboard/reservations/${r.id}/karte`);
+        } else {
+          fetchData();
+        }
       } else {
         alert("エラー: " + data.error);
       }
@@ -141,10 +157,9 @@ export default function CustomerDetailPage() {
       <main className="p-4 max-w-3xl mx-auto space-y-6 mt-4">
 
         {/* プロフィールカード */}
-        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
+        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-2">
           {profile.name_kana && <p className="text-sm text-gray-500">{profile.name_kana}</p>}
           {profile.phone && <p className="text-sm text-gray-700">📞 {profile.phone}</p>}
-
           {profile.admin_memo && (
             <p className="text-sm text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-3">
               📌 管理メモ: {profile.admin_memo}
@@ -171,16 +186,10 @@ export default function CustomerDetailPage() {
                     </div>
                     {adminRole !== 'staff' ? (
                       <div className="flex flex-col gap-2 min-w-[160px]">
-                        <button
-                          onClick={() => handleComplete(r)}
-                          className="w-full py-2 bg-green-600 text-white font-bold rounded-lg shadow text-sm hover:bg-green-700 transition"
-                        >
+                        <button onClick={() => handleComplete(r)} className="w-full py-2 bg-green-600 text-white font-bold rounded-lg shadow text-sm hover:bg-green-700 transition">
                           ✅ 受講した → カルテ作成へ
                         </button>
-                        <button
-                          onClick={() => handleAbsent(r)}
-                          className="w-full py-2 bg-gray-200 text-gray-600 font-bold rounded-lg text-xs hover:bg-gray-300 transition"
-                        >
+                        <button onClick={() => handleAbsent(r)} className="w-full py-2 bg-gray-200 text-gray-600 font-bold rounded-lg text-xs hover:bg-gray-300 transition">
                           ❌ 欠席・無断キャンセル
                         </button>
                       </div>
@@ -194,7 +203,7 @@ export default function CustomerDetailPage() {
           </section>
         )}
 
-        {/* 予約中のレッスン（期日未来のもの） */}
+        {/* 予約中のレッスン */}
         {upcoming.length > 0 && (
           <section>
             <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-gray-300 pb-1">📅 予約中</h2>
@@ -214,7 +223,7 @@ export default function CustomerDetailPage() {
           </section>
         )}
 
-        {/* 受講済み（カルテ一覧） */}
+        {/* 受講済み（カルテ一覧）*/}
         <section>
           <h2 className="text-lg font-bold text-gray-700 mb-3 border-b-2 border-brand pb-1">
             📝 受講済みレッスン・カルテ
@@ -235,7 +244,6 @@ export default function CustomerDetailPage() {
                           </span>
                           <p className="text-sm font-bold text-gray-700">{formatDate(r.start_time)}</p>
                         </div>
-
                         {karte ? (
                           <div className="mt-2 bg-gray-50 rounded-lg p-3 space-y-1">
                             <p className="text-xs font-bold text-gray-500">
@@ -247,15 +255,20 @@ export default function CustomerDetailPage() {
                           <p className="mt-2 text-xs text-gray-400 bg-gray-50 rounded-lg p-2">📋 カルテ未作成</p>
                         )}
                       </div>
-
-                      <div className="shrink-0">
-                        <Link
-                          href={`/dashboard/reservations/${r.id}/karte`}
-                          className="block text-center text-xs font-bold px-3 py-2 rounded-lg shadow bg-blue-600 text-white hover:bg-blue-700 transition"
-                        >
-                          {karte ? "編集" : "作成"}
-                        </Link>
-                      </div>
+                      {adminRole !== 'staff' && (
+                        <div className="shrink-0 flex flex-col gap-1">
+                          <Link href={`/dashboard/reservations/${r.id}/karte`} className="block text-center text-xs font-bold px-3 py-2 rounded-lg shadow bg-blue-600 text-white hover:bg-blue-700 transition">
+                            {karte ? "編集" : "作成"}
+                          </Link>
+                          {/* #7: ステータス修正ボタン */}
+                          <button
+                            onClick={() => handleCorrectStatus(r, "cancelled")}
+                            className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 transition"
+                          >
+                            修正
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -272,7 +285,18 @@ export default function CustomerDetailPage() {
               {cancelled.map(r => (
                 <div key={r.id} className="bg-gray-50 rounded-xl border p-3 flex justify-between items-center opacity-70">
                   <p className="text-sm text-gray-600">{formatDate(r.start_time)}</p>
-                  <span className="text-xs text-gray-400">キャンセル</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">キャンセル</span>
+                    {/* #7: キャンセル→受講済みに修正 */}
+                    {adminRole !== 'staff' && (
+                      <button
+                        onClick={() => handleCorrectStatus(r, "completed")}
+                        className="text-xs text-gray-400 hover:text-green-600 px-2 py-1 rounded hover:bg-green-50 transition"
+                      >
+                        修正
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

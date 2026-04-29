@@ -35,7 +35,10 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [pendingKartes, setPendingKartes] = useState<PendingKarte[]>([]);
+  const [oldUnprocessed, setOldUnprocessed] = useState<AdminReservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOld, setLoadingOld] = useState(false);
+  const [showOld, setShowOld] = useState(false);
   const [adminRole, setAdminRole] = useState('full');
 
   const handleLogout = async () => {
@@ -58,61 +61,60 @@ export default function AdminDashboard() {
     }
   };
 
+  // #8: 過去の未処理予約を検索
+  const fetchOldUnprocessed = async () => {
+    setLoadingOld(true);
+    try {
+      const data = await fetch("/api/admin/reservations?includeOld=true").then(r => r.json());
+      if (data.success) setOldUnprocessed(data.reservations);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingOld(false);
+      setShowOld(true);
+    }
+  };
+
   useEffect(() => {
     setAdminRole(getAdminRole());
     fetchReservations();
   }, []);
 
   const handleComplete = async (res: AdminReservation) => {
-    if (!window.confirm(`${res.profiles?.name} 様のレッスンを完了とし、カルテ作成ページへ移動します。よろしいですか？`)) {
-      return;
-    }
-
+    if (!window.confirm(`${res.profiles?.name} 様のレッスンを完了とし、カルテ作成ページへ移動します。よろしいですか？`)) return;
     try {
       const response = await fetch("/api/admin/reservations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationId: res.id,
-          status: "completed",
-          userId: res.user_id,
-          lessonType: res.lesson_type,
-        }),
+        body: JSON.stringify({ reservationId: res.id, status: "completed" }),
       });
       const data = await response.json();
-
       if (data.success) {
         router.push(`/dashboard/reservations/${res.id}/karte`);
       } else {
         alert("エラー: " + data.error);
       }
-    } catch (err) {
+    } catch {
       alert("通信エラーが発生しました。");
     }
   };
 
   const handleAbsent = async (res: AdminReservation) => {
-    if (!window.confirm(`${res.profiles?.name} 様を欠席・無断キャンセルとして処理します。チケットは消費されません。よろしいですか？`)) {
-      return;
-    }
-
+    if (!window.confirm(`${res.profiles?.name} 様を欠席・無断キャンセルとして処理します。よろしいですか？`)) return;
     try {
       const response = await fetch("/api/admin/reservations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reservationId: res.id,
-          status: "cancelled",
-        }),
+        body: JSON.stringify({ reservationId: res.id, status: "cancelled" }),
       });
       const data = await response.json();
-
       if (data.success) {
         fetchReservations();
+        setOldUnprocessed(prev => prev.filter(r => r.id !== res.id));
       } else {
         alert("エラー: " + data.error);
       }
-    } catch (err) {
+    } catch {
       alert("通信エラーが発生しました。");
     }
   };
@@ -186,6 +188,60 @@ export default function AdminDashboard() {
             </section>
           );
         })()}
+
+        {/* #8: 過去の未処理予約を検索するボタン */}
+        {adminRole !== 'staff' && (
+          <div className="flex justify-end">
+            <button
+              onClick={fetchOldUnprocessed}
+              disabled={loadingOld}
+              className="text-sm text-gray-500 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 transition disabled:opacity-40"
+            >
+              {loadingOld ? "検索中..." : "🔍 過去の未処理予約を検索（90日以内）"}
+            </button>
+          </div>
+        )}
+
+        {/* 過去の未処理一覧 */}
+        {showOld && adminRole !== 'staff' && (
+          <section>
+            <h2 className="text-xl font-bold text-red-800 mb-4 border-b-2 border-red-300 pb-2 flex items-center gap-2">
+              🕐 過去の未処理予約
+              <span className="text-sm bg-red-600 text-white px-2 py-0.5 rounded-full">{oldUnprocessed.length}件</span>
+            </h2>
+            {oldUnprocessed.length === 0 ? (
+              <p className="text-gray-500 bg-white p-4 rounded-xl text-center text-sm">過去90日以内の未処理予約はありません。</p>
+            ) : (
+              <div className="space-y-3">
+                {oldUnprocessed.map(r => (
+                  <div key={r.id} className="bg-red-50 p-4 rounded-xl shadow-sm border-l-4 border-red-400">
+                    <div className="flex flex-col md:flex-row justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
+                            {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                          </span>
+                          <span className="text-gray-600 text-sm font-bold">
+                            {new Date(r.start_time).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <h3 className="font-black text-lg text-gray-800">{r.profiles?.name || '名称未設定'} 様</h3>
+                      </div>
+                      <div className="flex flex-col gap-2 min-w-[180px]">
+                        <button onClick={() => handleComplete(r)} className="w-full py-2 bg-green-600 text-white font-bold rounded-lg shadow text-sm hover:bg-green-700 transition">
+                          ✅ 受講した → カルテ作成へ
+                        </button>
+                        <button onClick={() => handleAbsent(r)} className="w-full py-2 bg-gray-200 text-gray-600 font-bold rounded-lg text-xs hover:bg-gray-300 transition">
+                          ❌ 欠席・無断キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ② カルテ未作成・下書き一覧（従業員には非表示） */}
         {pendingKartes.length > 0 && adminRole !== 'staff' && (

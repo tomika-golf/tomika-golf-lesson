@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(npx tsc *)",
+      "Bash(next build *)",
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('next:', p.dependencies.next\\)\")",
+      "Bash(npm run *)",
+      "Bash(git commit -m 'temp: 環境変数確認用デバッグエンドポイント（確認後削除） *)",
+      "Bash(git commit -m 'fix: ログイン時にtrimを追加・デバッグ出力を文字数表示に改善 *)",
+      "Bash(git commit -m 'fix: booking APIのプロフィール作成エラーハンドリング強化・バージョン確認エンドポイント追加 *)",
+      "Bash(git commit -m 'fix: useAuthのスコープエラー修正（json変数をsessionAccessTokenに変更） *)",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('dependencies:', JSON.stringify\\(pkg.dependencies, null, 2\\)\\)\")",
+      "Bash(gh run *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

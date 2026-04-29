@@ -6,7 +6,7 @@ export async function GET() {
     const admin = createAdminClient();
     const { data, error } = await admin
       .from('profiles')
-      .select('id, name, name_kana, phone, ticket_man_to_man, ticket_group, admin_memo')
+      .select('id, name, name_kana, phone, admin_memo')
       .order('name', { ascending: true });
 
     if (error) throw error;
