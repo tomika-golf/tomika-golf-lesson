@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', systemInstruction });
 
     const result = await model.generateContent(message);
     const rawText = result.response.text().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
