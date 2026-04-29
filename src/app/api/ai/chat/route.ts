@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const modelNames = (listData.models || []).map((m: {name: string}) => m.name);
     console.log('Available models:', modelNames.join(', '));
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction });
 
     const result = await model.generateContent(message);
     const rawText = result.response.text().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
