@@ -72,6 +72,12 @@ export async function POST(request: Request) {
 
     const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
 
+    // 利用可能なモデルを一時的にログ出力
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const listData = await listRes.json();
+    const modelNames = (listData.models || []).map((m: {name: string}) => m.name);
+    console.log('Available models:', modelNames.join(', '));
+
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction });
 
     const result = await model.generateContent(message);
