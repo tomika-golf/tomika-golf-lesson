@@ -31,6 +31,12 @@ function getAdminRole(): string {
   return match?.[1] ?? 'full';
 }
 
+type LineTarget = {
+  reservationId: string;
+  customerName: string;
+  startTime: string;
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
@@ -40,6 +46,10 @@ export default function AdminDashboard() {
   const [loadingOld, setLoadingOld] = useState(false);
   const [showOld, setShowOld] = useState(false);
   const [adminRole, setAdminRole] = useState('full');
+  const [lineTarget, setLineTarget] = useState<LineTarget | null>(null);
+  const [lineMessage, setLineMessage] = useState('');
+  const [lineSending, setLineSending] = useState(false);
+  const [lineToast, setLineToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -99,6 +109,42 @@ export default function AdminDashboard() {
     }
   };
 
+  const showLineToast = (msg: string, ok = true) => {
+    setLineToast({ msg, ok });
+    setTimeout(() => setLineToast(null), 3000);
+  };
+
+  const openLineModal = (r: AdminReservation) => {
+    const d = new Date(r.start_time);
+    const dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
+    const timeStr = `${d.getHours()}:00`;
+    setLineTarget({ reservationId: r.id, customerName: r.profiles?.name || 'お客様', startTime: `${dateStr} ${timeStr}` });
+    setLineMessage('');
+  };
+
+  const sendLineMessage = async () => {
+    if (!lineTarget || !lineMessage.trim()) return;
+    setLineSending(true);
+    try {
+      const res = await fetch('/api/admin/line-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservationId: lineTarget.reservationId, message: lineMessage }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLineTarget(null);
+        showLineToast('LINEを送信しました');
+      } else {
+        showLineToast(data.error || '送信に失敗しました', false);
+      }
+    } catch {
+      showLineToast('通信エラーが発生しました', false);
+    } finally {
+      setLineSending(false);
+    }
+  };
+
   const handleAbsent = async (res: AdminReservation) => {
     if (!window.confirm(`${res.profiles?.name} 様を欠席・無断キャンセルとして処理します。よろしいですか？`)) return;
     try {
@@ -123,6 +169,39 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      {lineToast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white font-bold text-sm ${lineToast.ok ? 'bg-green-600' : 'bg-red-500'}`}>
+          {lineToast.msg}
+        </div>
+      )}
+
+      {lineTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <div>
+              <p className="font-black text-gray-800 text-lg">📩 LINEを送る</p>
+              <p className="text-sm text-gray-500 mt-1">{lineTarget.customerName} 様 / {lineTarget.startTime}</p>
+            </div>
+            <textarea
+              value={lineMessage}
+              onChange={e => setLineMessage(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
+              placeholder="メッセージを入力..."
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setLineTarget(null)} className="flex-1 py-2 border-2 border-gray-300 rounded-xl font-bold text-gray-600 text-sm">キャンセル</button>
+              <button
+                onClick={sendLineMessage}
+                disabled={lineSending || !lineMessage.trim()}
+                className="flex-1 py-2 bg-green-600 text-white rounded-xl font-bold text-sm disabled:opacity-50"
+              >
+                {lineSending ? '送信中...' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-gray-800 text-white px-6 py-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-xl font-bold">管理者ダッシュボード</h1>
         <div className="flex flex-wrap gap-2 text-sm">
@@ -178,6 +257,12 @@ export default function AdminDashboard() {
                             className="w-full py-2 bg-gray-200 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-300 transition"
                           >
                             ❌ 欠席・無断キャンセル
+                          </button>
+                          <button
+                            onClick={() => openLineModal(r)}
+                            className="w-full py-2 bg-green-100 text-green-700 font-bold rounded-lg text-sm hover:bg-green-200 transition"
+                          >
+                            📩 LINEを送る
                           </button>
                         </div>
                       ) : (
@@ -329,6 +414,12 @@ export default function AdminDashboard() {
                                   <Link href={`/dashboard/reservations/${r.id}/karte`} className="w-full text-center py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm hover:bg-gray-200 transition">
                                     📝 カルテを準備する
                                   </Link>
+                                  <button
+                                    onClick={() => openLineModal(r)}
+                                    className="w-full py-2 bg-green-100 text-green-700 font-bold rounded-lg text-sm hover:bg-green-200 transition"
+                                  >
+                                    📩 LINEを送る
+                                  </button>
                                 </>
                               ) : (
                                 <div className="w-full text-center py-2 bg-gray-50 text-gray-400 rounded-lg text-xs">
