@@ -176,47 +176,51 @@ export default function CustomerDetailPage() {
       <header className="bg-gray-800 text-white px-6 py-4 sticky top-0 z-10 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/customers" className="text-gray-400 hover:text-white text-sm">← 一覧</Link>
-          {editingName ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="bg-gray-700 text-white border border-gray-500 rounded-lg px-2 py-1 text-base w-36 focus:outline-none focus:border-white"
-                autoFocus
-              />
-              <button
-                onClick={handleNameSave}
-                disabled={nameLoading || newName.trim().length < 2}
-                className="text-xs bg-green-500 hover:bg-green-600 px-3 py-1 rounded-lg font-bold disabled:opacity-50"
-              >
-                {nameLoading ? "..." : "保存"}
-              </button>
-              <button
-                onClick={() => { setEditingName(false); setNewName(''); }}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1"
-              >
-                取消
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">{profile.name} 様</h1>
-              <button
-                onClick={() => { setEditingName(true); setNewName(profile.name); }}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2 py-0.5 rounded"
-              >
-                名前を修正
-              </button>
-            </div>
-          )}
+          <h1 className="text-xl font-bold">{profile.name} 様</h1>
         </div>
       </header>
 
       <main className="p-4 max-w-3xl mx-auto space-y-6 mt-4">
 
         {/* プロフィールカード */}
-        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-2">
+        <section className="bg-white rounded-xl border shadow-sm p-5 space-y-3">
+          {/* 名前編集 */}
+          <div className="flex items-center justify-between gap-3">
+            {editingName ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-600"
+                  autoFocus
+                />
+                <button
+                  onClick={handleNameSave}
+                  disabled={nameLoading || newName.trim().length < 2}
+                  className="text-sm bg-gray-800 text-white px-4 py-1.5 rounded-lg font-bold disabled:opacity-50 whitespace-nowrap"
+                >
+                  {nameLoading ? "保存中..." : "保存"}
+                </button>
+                <button
+                  onClick={() => { setEditingName(false); setNewName(''); }}
+                  className="text-sm text-gray-500 px-3 py-1.5 border rounded-lg"
+                >
+                  取消
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="font-bold text-gray-800">{profile.name}</p>
+                <button
+                  onClick={() => { setEditingName(true); setNewName(profile.name); }}
+                  className="text-xs text-gray-500 border border-gray-300 hover:border-gray-500 px-2 py-1 rounded-lg hover:bg-gray-50 transition"
+                >
+                  ✏️ 名前を修正
+                </button>
+              </div>
+            )}
+          </div>
           {profile.name_kana && <p className="text-sm text-gray-500">{profile.name_kana}</p>}
           {profile.phone && <p className="text-sm text-gray-700">📞 {profile.phone}</p>}
           {profile.admin_memo && (
