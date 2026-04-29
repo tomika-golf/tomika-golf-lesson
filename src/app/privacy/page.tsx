@@ -11,7 +11,6 @@ export default function PrivacyPage() {
 
           <p>富加ゴルフ（以下「当スクール」）は、本サービス（レッスン予約・管理システム）を通じて取得するお客様の個人情報について、個人情報の保護に関する法律（個人情報保護法）およびその他関連法令を遵守し、以下のとおり適切に取り扱います。</p>
 
-          {/* 1. 事業者情報 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第1条　事業者情報</h2>
             <table className="w-full text-sm border-collapse">
@@ -32,7 +31,6 @@ export default function PrivacyPage() {
             </table>
           </section>
 
-          {/* 2. 取得する個人情報 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第2条　取得する個人情報</h2>
             <p className="mb-3">当スクールは、本サービスの提供にあたり、以下の個人情報を取得します。</p>
@@ -46,49 +44,63 @@ export default function PrivacyPage() {
                 </ul>
               </div>
               <div>
-                <p className="font-semibold text-gray-800 mb-1">② お客様が任意に入力する情報</p>
+                <p className="font-semibold text-gray-800 mb-1">② お客様またはインストラクターが入力・登録する情報</p>
                 <ul className="list-disc ml-6 space-y-1">
                   <li>氏名・氏名（ふりがな）</li>
                   <li>電話番号</li>
+                  <li>レッスン予約時に入力する希望課題・自由記述</li>
                 </ul>
               </div>
               <div>
                 <p className="font-semibold text-gray-800 mb-1">③ サービス利用を通じて生成・記録される情報</p>
                 <ul className="list-disc ml-6 space-y-1">
-                  <li>レッスン予約履歴（日時・内容）</li>
-                  <li>レッスンカルテ（インストラクターが記録した課題・改善策・練習方法）</li>
+                  <li>レッスン予約履歴（日時・レッスン種別・キャンセル理由を含む）</li>
+                  <li>レッスンカルテ（課題・改善策・練習方法の3項目）</li>
+                  <li>AIチャット相談室における会話内容</li>
                   <li>管理者メモ（スクール内部でのみ参照される補足情報）</li>
                 </ul>
               </div>
             </div>
           </section>
 
-          {/* 3. 利用目的 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第3条　利用目的</h2>
             <p className="mb-2">取得した個人情報は、以下の目的のみに利用します。</p>
             <ol className="list-decimal ml-6 space-y-2">
               <li>レッスンの予約受付・確認・変更・キャンセル処理</li>
               <li>レッスンカルテの作成・配信・管理</li>
-              <li>LINEメッセージによる予約確認・カルテ公開通知などの重要連絡</li>
+              <li>LINEメッセージによる予約確認・リマインド・カルテ公開通知などの重要連絡</li>
+              <li>AIチャット相談室における過去のカルテ内容を参照した回答生成</li>
               <li>お問い合わせへの回答</li>
               <li>利用状況の集計・サービス改善</li>
             </ol>
             <p className="mt-3 text-xs text-gray-500">※上記以外の目的で個人情報を利用する場合は、あらかじめご本人の同意を得ます。</p>
           </section>
 
-          {/* 4. AIによる処理 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第4条　AIによる情報処理</h2>
-            <p className="mb-2">当スクールは、インストラクターがレッスンカルテを作成する際に、外部のAIサービス（Anthropic社およびGoogle社が提供するAPIを含む）を利用することがあります。この処理においてカルテの内容（課題・改善策等）が一時的にAIサービスへ送信されます。</p>
-            <ul className="list-disc ml-6 space-y-1 mt-2">
-              <li>送信されるのはカルテのテキスト内容のみです。氏名・電話番号・LINEユーザーIDは含まれません。</li>
-              <li>AIの処理結果はインストラクターが確認・編集したうえで保存されます。</li>
-              <li>利用するAIサービスは業務上の必要に応じて変更される場合があります。</li>
-            </ul>
+            <p className="mb-3">当スクールは、以下の2つの場面で外部AIサービスを利用します。</p>
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-semibold text-gray-800 mb-2">① レッスンカルテの作成支援</p>
+                <p>インストラクターがカルテを作成する際に、外部AIサービス（Google社が提供するGemini API）を利用します。レッスン内容のテキストが一時的にAIサービスへ送信されます。</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1 text-xs text-gray-600">
+                  <li>送信されるのはレッスン内容のテキストのみです。氏名・電話番号・LINEユーザーIDは含まれません。</li>
+                  <li>AIの生成結果はインストラクターが確認・編集したうえで保存されます。</li>
+                </ul>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-semibold text-gray-800 mb-2">② AIチャット相談室</p>
+                <p>マイページ内のAIチャット機能では、お客様ご本人の過去のカルテ内容（課題・改善策・練習方法のテキスト）をAIサービスへ送信し、個別の回答を生成します。</p>
+                <ul className="list-disc ml-6 mt-2 space-y-1 text-xs text-gray-600">
+                  <li>送信されるのはご自身のカルテテキストのみです。氏名・電話番号・LINEユーザーIDは含まれません。</li>
+                  <li>他のお客様のカルテが送信されることはありません。</li>
+                  <li>利用するAIサービスは業務上の必要に応じて変更される場合があります。変更の際は本ページにてお知らせします。</li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* 5. 第三者提供・委託 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第5条　第三者提供・業務委託</h2>
             <p className="mb-3">当スクールは、法令に基づく場合またはご本人の同意がある場合を除き、個人情報を第三者に提供しません。</p>
@@ -105,14 +117,14 @@ export default function PrivacyPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="border border-gray-200 px-3 py-2">クラウドデータベースサービス</td>
-                    <td className="border border-gray-200 px-3 py-2">米国企業</td>
+                    <td className="border border-gray-200 px-3 py-2">Supabase</td>
+                    <td className="border border-gray-200 px-3 py-2">Supabase, Inc.（米国）</td>
                     <td className="border border-gray-200 px-3 py-2">全ての登録情報</td>
                     <td className="border border-gray-200 px-3 py-2">データベース・認証基盤</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="border border-gray-200 px-3 py-2">クラウドホスティングサービス</td>
-                    <td className="border border-gray-200 px-3 py-2">米国企業</td>
+                    <td className="border border-gray-200 px-3 py-2">Vercel</td>
+                    <td className="border border-gray-200 px-3 py-2">Vercel, Inc.（米国）</td>
                     <td className="border border-gray-200 px-3 py-2">アクセスログ</td>
                     <td className="border border-gray-200 px-3 py-2">サーバー・ホスティング</td>
                   </tr>
@@ -123,16 +135,16 @@ export default function PrivacyPage() {
                     <td className="border border-gray-200 px-3 py-2">通知メッセージ送信</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="border border-gray-200 px-3 py-2">AI生成API（Anthropic）</td>
-                    <td className="border border-gray-200 px-3 py-2">Anthropic, PBC（米国）</td>
-                    <td className="border border-gray-200 px-3 py-2">カルテテキスト</td>
-                    <td className="border border-gray-200 px-3 py-2">カルテ文章生成支援</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-200 px-3 py-2">AI生成API（Google）</td>
+                    <td className="border border-gray-200 px-3 py-2">Gemini API</td>
                     <td className="border border-gray-200 px-3 py-2">Google LLC（米国）</td>
                     <td className="border border-gray-200 px-3 py-2">カルテテキスト</td>
-                    <td className="border border-gray-200 px-3 py-2">カルテ文章生成支援（利用時）</td>
+                    <td className="border border-gray-200 px-3 py-2">カルテ生成支援・AIチャット回答</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-200 px-3 py-2">Google Calendar API</td>
+                    <td className="border border-gray-200 px-3 py-2">Google LLC（米国）</td>
+                    <td className="border border-gray-200 px-3 py-2">予約枠情報（個人情報を含まず）</td>
+                    <td className="border border-gray-200 px-3 py-2">レッスン枠の在庫管理</td>
                   </tr>
                 </tbody>
               </table>
@@ -140,7 +152,6 @@ export default function PrivacyPage() {
             <p className="mt-3 text-xs text-gray-500">※ 各サービスのプライバシーポリシーが適用されます。</p>
           </section>
 
-          {/* 6. 保存期間 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第6条　保存期間</h2>
             <ul className="list-disc ml-6 space-y-2">
@@ -151,19 +162,19 @@ export default function PrivacyPage() {
             <p className="mt-3 text-xs text-gray-500">保存期間を超えたデータは速やかに削除いたします。</p>
           </section>
 
-          {/* 7. セキュリティ */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第7条　安全管理措置</h2>
             <p>当スクールは、個人情報の漏えい・滅失・毀損の防止のために、以下の安全管理措置を講じます。</p>
             <ul className="list-disc ml-6 mt-2 space-y-1">
               <li>通信の暗号化（HTTPS/TLS）</li>
-              <li>アクセス権限の最小化（管理者アカウントのロールによる制限）</li>
-              <li>LINE IDトークンの署名検証による認証</li>
-              <li>個人情報へのアクセスを業務上必要な担当者に限定</li>
+              <li>管理者アカウントのロール制限（閲覧範囲の最小化）</li>
+              <li>管理者パスワードのbcryptによる暗号化保管</li>
+              <li>管理者ログインの連続失敗によるアカウントロック機能</li>
+              <li>LINE IDトークンの署名検証による本人確認</li>
+              <li>管理者操作ログの記録・保管</li>
             </ul>
           </section>
 
-          {/* 8. 権利行使 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第8条　個人情報の開示・訂正・削除のご請求</h2>
             <p className="mb-3">ご本人は、当スクールが保有する自己の個人情報について、開示・訂正・追加・削除・利用停止・消去・第三者提供の停止を請求することができます。</p>
@@ -176,13 +187,11 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* 9. Cookie */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第9条　Cookie（クッキー）の利用</h2>
             <p>本サービスでは、ログイン状態の維持を目的としてCookieを使用します。Cookieにはお客様を特定できる情報は含まれておらず、セッション管理のみに使用します。ブラウザの設定によりCookieを無効にすることができますが、その場合、ログインが正常に機能しない場合があります。</p>
           </section>
 
-          {/* 10. ポリシーの変更 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第10条　プライバシーポリシーの変更</h2>
             <p>当スクールは、法令の改正や事業内容の変更に伴い、本ポリシーを改定することがあります。改定後のポリシーは本ページに掲載した時点から効力を生じるものとします。重要な変更がある場合は、LINEメッセージ等にてお知らせします。</p>
@@ -192,7 +201,7 @@ export default function PrivacyPage() {
 
         <div className="mt-12 text-center text-xs text-gray-400 border-t pt-6">
           <p>附則：2025年4月11日 制定</p>
-          <p>最終改訂：2026年4月28日</p>
+          <p>最終改訂：2026年4月29日</p>
           <div className="mt-4">
             <button onClick={() => window.history.back()} className="text-green-700 font-bold underline">
               ← 戻る
