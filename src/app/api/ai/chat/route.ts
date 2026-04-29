@@ -92,6 +92,6 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('AI Chat Error:', msg);
-    return NextResponse.json({ success: false, error: 'AIとの通信に失敗しました' }, { status: 500 });
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
