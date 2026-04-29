@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 // ゴースト用アカウント（auth.users）を強制的に作成するため、
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     // （お客様には一切見えず、LINE連携の代わりとして内部的に使うだけのものです）
     const timestamp = Date.now();
     const ghostEmail = `ghost_${timestamp}@ghost.tomika-golf.local`;
-    const ghostPassword = `ghost_pass_${timestamp}`;
+    const ghostPassword = randomBytes(32).toString('hex'); // 推測不可能なランダムパスワード
 
     // 2. 強制的にユーザー（auth.users）を作成
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({

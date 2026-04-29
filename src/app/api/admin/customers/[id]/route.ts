@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+// 管理者が編集できるフィールドを明示的に限定する（意図しないフィールドの書き換えを防ぐ）
+const ALLOWED_PATCH_FIELDS = ['name', 'name_kana', 'phone', 'admin_memo'] as const;
+type AllowedField = typeof ALLOWED_PATCH_FIELDS[number];
+
 export async function PATCH(
   request: Request,
   ctx: { params: Promise<{ id: string }> }
@@ -10,7 +14,19 @@ export async function PATCH(
     const body = await request.json();
     const admin = createAdminClient();
 
-    const { error } = await admin.from('profiles').update(body).eq('id', id);
+    const safeUpdate = ALLOWED_PATCH_FIELDS.reduce<Partial<Record<AllowedField, unknown>>>(
+      (acc, key) => {
+        if (key in body) acc[key] = body[key];
+        return acc;
+      },
+      {}
+    );
+
+    if (Object.keys(safeUpdate).length === 0) {
+      return NextResponse.json({ success: false, error: '更新できるフィールドがありません' }, { status: 400 });
+    }
+
+    const { error } = await admin.from('profiles').update(safeUpdate).eq('id', id);
     if (error) throw error;
 
     return NextResponse.json({ success: true });
