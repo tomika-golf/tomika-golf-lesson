@@ -18,13 +18,49 @@ function parseKarteSections(content: string) {
   };
 }
 
-async function sendLineKarteNotification(reservationId: string) {
+// JST で夜10時〜翌朝8時の静寂時間帯かどうか判定
+function isQuietHoursJST(): boolean {
+  const jstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours();
+  return jstHour >= 22 || jstHour < 8;
+}
+
+// 翌朝8時JST（UTC表記）を返す
+function next8amJST(): Date {
+  const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const target = new Date(jstNow);
+  target.setUTCHours(8, 0, 0, 0);
+  if (jstNow.getUTCHours() >= 8) {
+    target.setUTCDate(target.getUTCDate() + 1);
+  }
+  return new Date(target.getTime() - 9 * 60 * 60 * 1000);
+}
+
+async function pushLineMessage(lineUserId: string, message: string) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
     console.error('[LINE通知] LINE_CHANNEL_ACCESS_TOKEN が未設定です');
     return;
   }
+  const res = await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      to: lineUserId,
+      messages: [{ type: 'text', text: message }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error('[LINE通知] 送信失敗 status:', res.status, 'body:', body);
+  } else {
+    console.log('[LINE通知] 送信成功 to:', lineUserId);
+  }
+}
 
+async function handleKarteNotification(reservationId: string, isEdit: boolean) {
   const { data: reservation } = await supabaseAdmin
     .from('reservations')
     .select('user_id, start_time')
@@ -38,7 +74,7 @@ async function sendLineKarteNotification(reservationId: string) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('line_user_id, name')
+    .select('line_user_id')
     .eq('id', reservation.user_id)
     .single();
 
@@ -52,28 +88,20 @@ async function sendLineKarteNotification(reservationId: string) {
     day: 'numeric',
   });
 
-  const res = await fetch('https://api.line.me/v2/bot/message/push', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      to: profile.line_user_id,
-      messages: [
-        {
-          type: 'text',
-          text: `📋 ${lessonDate}のレッスンカルテが公開されました！\n\nマイページからご確認いただけます。`,
-        },
-      ],
-    }),
-  });
+  const message = isEdit
+    ? `📝 ${lessonDate}のレッスンカルテが編集されました。\n\nマイページからご確認いただけます。`
+    : `📋 ${lessonDate}のレッスンカルテが公開されました！\n\nマイページからご確認いただけます。`;
 
-  if (!res.ok) {
-    const body = await res.text();
-    console.error('[LINE通知] 送信失敗 status:', res.status, 'body:', body);
+  if (isQuietHoursJST()) {
+    // 静寂時間帯 → 翌朝8時に送信するためキューに積む
+    await supabaseAdmin.from('line_notification_queue').insert({
+      line_user_id: profile.line_user_id,
+      message,
+      scheduled_at: next8amJST().toISOString(),
+    });
+    console.log('[LINE通知] 静寂時間帯のためキューに登録 scheduled_at:', next8amJST().toISOString());
   } else {
-    console.log('[LINE通知] 送信成功 to:', profile.line_user_id);
+    await pushLineMessage(profile.line_user_id, message);
   }
 }
 
@@ -84,6 +112,15 @@ export async function POST(request: Request) {
     if (!reservationId) {
       return NextResponse.json({ error: 'Reservation ID is missing' }, { status: 400 });
     }
+
+    // 公開済みカルテが存在するか確認（公開 vs 編集の判定に使う）
+    const { data: existing } = await supabaseAdmin
+      .from('review_notes')
+      .select('is_draft')
+      .eq('reservation_id', reservationId)
+      .single();
+
+    const isAlreadyPublished = existing && !existing.is_draft;
 
     const { good, improve, homework } = parseKarteSections(content);
 
@@ -107,10 +144,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'カルテの保存に失敗しました' }, { status: 500 });
     }
 
-    // LINEプッシュ通知（公開時のみ、エラーは握りつぶしてカルテ保存は成功扱い）
     if (!isDraft) {
-      sendLineKarteNotification(reservationId).catch(err =>
-        console.error('LINE notification error:', err)
+      handleKarteNotification(reservationId, !!isAlreadyPublished).catch(err =>
+        console.error('[LINE通知] エラー:', err)
       );
     }
 
