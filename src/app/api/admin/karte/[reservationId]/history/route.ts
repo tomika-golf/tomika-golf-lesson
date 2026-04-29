@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export async function GET(_: Request, { params }: { params: { reservationId: string } }) {
+export async function GET(_: Request, ctx: { params: Promise<{ reservationId: string }> }) {
+  const { reservationId } = await ctx.params;
   const admin = createAdminClient();
 
   const { data: note } = await admin
     .from('review_notes')
     .select('id')
-    .eq('reservation_id', params.reservationId)
+    .eq('reservation_id', reservationId)
     .single();
 
   if (!note) return NextResponse.json({ success: true, history: [] });
