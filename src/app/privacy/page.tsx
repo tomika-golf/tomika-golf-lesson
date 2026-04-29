@@ -80,11 +80,11 @@ export default function PrivacyPage() {
           {/* 4. AIによる処理 */}
           <section>
             <h2 className="font-bold text-base text-gray-900 mb-3 border-l-4 border-green-700 pl-3">第4条　AIによる情報処理</h2>
-            <p className="mb-2">当スクールは、インストラクターがレッスンカルテを作成する際に、Anthropic社が提供するAI（Claude）を利用することがあります。この処理においてカルテの内容（課題・改善策等）が一時的にAIサービスへ送信されます。</p>
+            <p className="mb-2">当スクールは、インストラクターがレッスンカルテを作成する際に、外部のAIサービス（Anthropic社およびGoogle社が提供するAPIを含む）を利用することがあります。この処理においてカルテの内容（課題・改善策等）が一時的にAIサービスへ送信されます。</p>
             <ul className="list-disc ml-6 space-y-1 mt-2">
               <li>送信されるのはカルテのテキスト内容のみです。氏名・電話番号・LINEユーザーIDは含まれません。</li>
               <li>AIの処理結果はインストラクターが確認・編集したうえで保存されます。</li>
-              <li>Anthropic社のデータ取扱い方針については、<a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-green-700 underline">Anthropic Privacy Policy</a>をご参照ください。</li>
+              <li>利用するAIサービスは業務上の必要に応じて変更される場合があります。</li>
             </ul>
           </section>
 
@@ -105,14 +105,14 @@ export default function PrivacyPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="border border-gray-200 px-3 py-2">Supabase</td>
-                    <td className="border border-gray-200 px-3 py-2">Supabase Inc.（米国）</td>
+                    <td className="border border-gray-200 px-3 py-2">クラウドデータベースサービス</td>
+                    <td className="border border-gray-200 px-3 py-2">米国企業</td>
                     <td className="border border-gray-200 px-3 py-2">全ての登録情報</td>
                     <td className="border border-gray-200 px-3 py-2">データベース・認証基盤</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="border border-gray-200 px-3 py-2">Vercel</td>
-                    <td className="border border-gray-200 px-3 py-2">Vercel Inc.（米国）</td>
+                    <td className="border border-gray-200 px-3 py-2">クラウドホスティングサービス</td>
+                    <td className="border border-gray-200 px-3 py-2">米国企業</td>
                     <td className="border border-gray-200 px-3 py-2">アクセスログ</td>
                     <td className="border border-gray-200 px-3 py-2">サーバー・ホスティング</td>
                   </tr>
@@ -123,10 +123,16 @@ export default function PrivacyPage() {
                     <td className="border border-gray-200 px-3 py-2">通知メッセージ送信</td>
                   </tr>
                   <tr className="bg-gray-50">
-                    <td className="border border-gray-200 px-3 py-2">Claude (Anthropic)</td>
+                    <td className="border border-gray-200 px-3 py-2">AI生成API（Anthropic）</td>
                     <td className="border border-gray-200 px-3 py-2">Anthropic, PBC（米国）</td>
                     <td className="border border-gray-200 px-3 py-2">カルテテキスト</td>
                     <td className="border border-gray-200 px-3 py-2">カルテ文章生成支援</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-200 px-3 py-2">AI生成API（Google）</td>
+                    <td className="border border-gray-200 px-3 py-2">Google LLC（米国）</td>
+                    <td className="border border-gray-200 px-3 py-2">カルテテキスト</td>
+                    <td className="border border-gray-200 px-3 py-2">カルテ文章生成支援（利用時）</td>
                   </tr>
                 </tbody>
               </table>
