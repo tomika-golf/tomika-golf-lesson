@@ -35,6 +35,8 @@ export default function KarteInputPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -140,6 +142,31 @@ export default function KarteInputPage() {
     recognition.start();
     recognitionRef.current = recognition;
     setIsRecording(true);
+  };
+
+  const handleTranscribe = async () => {
+    if (!audioFile) return;
+    if (audioFile.size > 19 * 1024 * 1024) {
+      alert('ファイルサイズが大きすぎます（上限19MB）。\n\niPhoneの場合：ボイスメモ → 共有 → 「音質を下げる」を選択してください。');
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const form = new FormData();
+      form.append('audio', audioFile);
+      const res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success) {
+        setNotes(prev => prev ? prev + '\n\n【文字起こし】\n' + data.text : '【文字起こし】\n' + data.text);
+        setAudioFile(null);
+      } else {
+        alert('文字起こしエラー: ' + data.error);
+      }
+    } catch {
+      alert('通信エラーが発生しました。');
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const handleAiGenerate = async () => {
@@ -268,6 +295,37 @@ export default function KarteInputPage() {
             {isRecording && (
               <p className="text-xs text-red-500 mb-2 animate-pulse">● 録音中... 話し終わったら「録音停止」を押してください</p>
             )}
+
+            {/* 音声ファイルから文字起こし */}
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-xs font-bold text-blue-700 mb-2">🎵 音声ファイルから文字起こし（ボイスメモ推奨）</p>
+              <div className="flex gap-2 items-center">
+                <label className="flex-1 flex items-center gap-2 border border-blue-300 bg-white rounded-lg px-3 py-2 cursor-pointer hover:bg-blue-50 transition">
+                  <span className="text-sm text-gray-500 truncate">
+                    {audioFile ? `${audioFile.name}（${(audioFile.size / 1024 / 1024).toFixed(1)}MB）` : 'ファイルを選択...'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"
+                    className="hidden"
+                    onChange={e => setAudioFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <button
+                  onClick={handleTranscribe}
+                  disabled={!audioFile || isTranscribing}
+                  className="whitespace-nowrap py-2 px-3 bg-blue-600 text-white text-sm font-bold rounded-lg disabled:opacity-40 hover:bg-blue-700 transition"
+                >
+                  {isTranscribing ? '変換中...' : '文字起こし'}
+                </button>
+              </div>
+              {audioFile && audioFile.size > 19 * 1024 * 1024 && (
+                <p className="text-xs text-red-600 mt-1">⚠️ ファイルが大きすぎます（上限19MB）。圧縮してください。</p>
+              )}
+              {isTranscribing && (
+                <p className="text-xs text-blue-600 mt-1 animate-pulse">● AIが文字起こし中です。しばらくお待ちください...</p>
+              )}
+            </div>
 
             <textarea
               value={notes}
