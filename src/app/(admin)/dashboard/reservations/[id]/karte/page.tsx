@@ -297,16 +297,24 @@ export default function KarteInputPage() {
             )}
 
             {/* 音声ファイルから文字起こし */}
-            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-xs font-bold text-blue-700 mb-2">🎵 音声ファイルから文字起こし（ボイスメモ推奨）</p>
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+              <p className="text-xs font-bold text-blue-700">🎵 ボイスメモから文字起こし</p>
+              <div className="text-xs text-blue-600 bg-blue-100 rounded-lg px-3 py-2 leading-relaxed">
+                <p className="font-bold mb-1">📱 iPhoneの手順</p>
+                <p>① ボイスメモアプリ → 録音を選ぶ → 「・・・」→「共有」→「ファイルに保存」</p>
+                <p>② 下の「ファイルを選ぶ」→「ファイルを参照」→ 保存したファイルを選ぶ</p>
+              </div>
               <div className="flex gap-2 items-center">
-                <label className="flex-1 flex items-center gap-2 border border-blue-300 bg-white rounded-lg px-3 py-2 cursor-pointer hover:bg-blue-50 transition">
-                  <span className="text-sm text-gray-500 truncate">
-                    {audioFile ? `${audioFile.name}（${(audioFile.size / 1024 / 1024).toFixed(1)}MB）` : 'ファイルを選択...'}
-                  </span>
+                <label className="flex-1 cursor-pointer">
+                  <div className={`flex items-center gap-2 border-2 rounded-xl px-3 py-3 transition ${audioFile ? 'border-blue-400 bg-white' : 'border-dashed border-blue-300 bg-white hover:bg-blue-50'}`}>
+                    <span className="text-xl">{audioFile ? '🎵' : '📂'}</span>
+                    <span className="text-sm text-gray-600 truncate">
+                      {audioFile ? `${audioFile.name}（${(audioFile.size / 1024 / 1024).toFixed(1)}MB）` : 'ファイルを選ぶ'}
+                    </span>
+                  </div>
                   <input
                     type="file"
-                    accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"
+                    accept=".m4a,.mp3,.wav,.aac,.ogg,.webm,.mp4,.caf,audio/*"
                     className="hidden"
                     onChange={e => setAudioFile(e.target.files?.[0] ?? null)}
                   />
@@ -314,16 +322,16 @@ export default function KarteInputPage() {
                 <button
                   onClick={handleTranscribe}
                   disabled={!audioFile || isTranscribing}
-                  className="whitespace-nowrap py-2 px-3 bg-blue-600 text-white text-sm font-bold rounded-lg disabled:opacity-40 hover:bg-blue-700 transition"
+                  className="whitespace-nowrap py-3 px-4 bg-blue-600 text-white text-sm font-bold rounded-xl disabled:opacity-40 hover:bg-blue-700 transition"
                 >
-                  {isTranscribing ? '変換中...' : '文字起こし'}
+                  {isTranscribing ? '変換中...' : 'AI文字起こし'}
                 </button>
               </div>
               {audioFile && audioFile.size > 19 * 1024 * 1024 && (
-                <p className="text-xs text-red-600 mt-1">⚠️ ファイルが大きすぎます（上限19MB）。圧縮してください。</p>
+                <p className="text-xs text-red-600">⚠️ 19MB超えています。ボイスメモ→共有時に「音質を下げる」を選んでください。</p>
               )}
               {isTranscribing && (
-                <p className="text-xs text-blue-600 mt-1 animate-pulse">● AIが文字起こし中です。しばらくお待ちください...</p>
+                <p className="text-xs text-blue-600 animate-pulse">● AIが文字起こし中です（50分の音声で約1〜2分かかります）...</p>
               )}
             </div>
 
