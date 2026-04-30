@@ -46,12 +46,17 @@ export async function POST(request: Request) {
     const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
 
     // late_requestsテーブルに保存
-    await admin.from('late_requests').insert({
+    const { error: insertError } = await admin.from('late_requests').insert({
       user_id: user.id,
       start_time: startTime,
       lesson_type: lessonType,
       status: 'pending',
     });
+
+    if (insertError) {
+      console.error('[late-request] insert error:', insertError.message, insertError.code);
+      return NextResponse.json({ error: `DB保存失敗: ${insertError.message}` }, { status: 500 });
+    }
 
     const adminLink = `${appBaseUrl}/dashboard`;
     const message = `⚡ 直前予約リクエスト\n\n${customerName} 様\n${dateStr} ${timeStr}（${lessonLabel}）\n\n管理ダッシュボードで対応してください。\n${adminLink}`;

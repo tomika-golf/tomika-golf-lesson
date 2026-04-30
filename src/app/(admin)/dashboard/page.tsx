@@ -309,11 +309,14 @@ export default function AdminDashboard() {
       <main className="p-4 max-w-4xl mx-auto space-y-6 mt-4">
 
         {/* ⚡ 直前予約リクエスト */}
-        {lateRequests.length > 0 && adminRole !== 'staff' && (
+        {adminRole !== 'staff' && (
           <section>
             <h2 className="text-xl font-bold text-purple-700 mb-4 border-b-2 border-purple-300 pb-2 flex items-center gap-2">
               ⚡ 直前予約リクエスト <span className="text-sm bg-purple-600 text-white px-2 py-0.5 rounded-full">{lateRequests.length}件</span>
             </h2>
+            {lateRequests.length === 0 && (
+              <p className="text-gray-400 text-sm bg-white p-4 rounded-xl text-center">現在、直前予約リクエストはありません。</p>
+            )}
             <div className="space-y-3">
               {lateRequests.map(req => {
                 const d = new Date(req.start_time);
