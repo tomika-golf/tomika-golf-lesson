@@ -29,6 +29,9 @@ export default function AdminBookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [filterDate, setFilterDate] = useState("");
+  const [manualMode, setManualMode] = useState(false);
+  const [manualDate, setManualDate] = useState("");
+  const [manualTime, setManualTime] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -71,21 +74,35 @@ export default function AdminBookingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedCustomer || !selectedSlot) return;
-    if (!window.confirm(`${selectedCustomer.name} 様\n${new Date(selectedSlot.startTime).toLocaleDateString()} ${formatTime(selectedSlot.startTime)}\n${lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}\n\nこの内容で予約を入れますか？`)) return;
+    if (!selectedCustomer) return;
+
+    let startTime: string;
+    let endTime: string;
+
+    if (manualMode) {
+      if (!manualDate || !manualTime) return;
+      const start = new Date(`${manualDate}T${manualTime}:00`);
+      const durationMin = lessonType === "man-to-man" ? 50 : 25;
+      const end = new Date(start.getTime() + durationMin * 60 * 1000);
+      startTime = start.toISOString();
+      endTime = end.toISOString();
+    } else {
+      if (!selectedSlot) return;
+      startTime = selectedSlot.startTime;
+      endTime = selectedSlot.endTime;
+    }
+
+    const dateLabel = new Date(startTime).toLocaleDateString("ja-JP", { month: "long", day: "numeric" });
+    const timeLabel = formatTime(startTime);
+    const typeLabel = lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）";
+    if (!window.confirm(`${selectedCustomer.name} 様\n${dateLabel} ${timeLabel}\n${typeLabel}\n\nこの内容で予約を入れますか？`)) return;
 
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: selectedCustomer.id,
-          startTime: selectedSlot.startTime,
-          endTime: selectedSlot.endTime,
-          lessonType,
-          memo,
-        }),
+        body: JSON.stringify({ userId: selectedCustomer.id, startTime, endTime, lessonType, memo }),
       });
       const data = await res.json();
       if (data.success) {
@@ -174,38 +191,90 @@ export default function AdminBookingPage() {
             <span className="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded-full">3</span>
             日時を選ぶ
           </h2>
-          <input
-            type="date"
-            value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
-            className="border-2 border-gray-200 rounded-xl px-4 py-2 mb-4 focus:outline-none focus:border-gray-600 text-sm"
-          />
-          {Object.keys(slotsByDate).length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-4">選択可能な枠がありません。</p>
-          ) : (
-            <div className="space-y-4">
-              {Object.entries(slotsByDate).map(([date, dateSlots]) => (
-                <div key={date}>
-                  <p className="text-sm font-bold text-gray-500 mb-2">{date}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {dateSlots.map(slot => (
-                      <button
-                        key={slot.startTime}
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition ${selectedSlot?.startTime === slot.startTime ? "bg-gray-800 text-white border-gray-800" : "border-gray-200 text-gray-700 hover:border-gray-500"}`}
-                      >
-                        {formatTime(slot.startTime)}
-                      </button>
-                    ))}
-                  </div>
+
+          {/* モード切替 */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => { setManualMode(false); setManualDate(""); setManualTime(""); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition ${!manualMode ? "bg-gray-800 text-white border-gray-800" : "border-gray-200 text-gray-600"}`}
+            >
+              カレンダーから選ぶ
+            </button>
+            <button
+              onClick={() => { setManualMode(true); setSelectedSlot(null); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition ${manualMode ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 text-gray-600"}`}
+            >
+              時間を自由に設定
+            </button>
+          </div>
+
+          {manualMode ? (
+            <div className="space-y-3">
+              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                カレンダー枠に関係なく、任意の日時で予約を作成します。レッスン後のカルテ作成などにもご利用できます。
+              </p>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-gray-500 mb-1 block">日付</label>
+                  <input
+                    type="date"
+                    value={manualDate}
+                    onChange={e => setManualDate(e.target.value)}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-600"
+                  />
                 </div>
-              ))}
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-gray-500 mb-1 block">開始時間</label>
+                  <input
+                    type="time"
+                    value={manualTime}
+                    onChange={e => setManualTime(e.target.value)}
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-600"
+                  />
+                </div>
+              </div>
+              {manualDate && manualTime && (
+                <p className="text-sm font-bold text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                  ✅ {new Date(`${manualDate}T${manualTime}:00`).toLocaleDateString("ja-JP", { month: "long", day: "numeric" })} {manualTime}〜（{lessonType === "man-to-man" ? "50分" : "25分"}）
+                </p>
+              )}
             </div>
-          )}
-          {selectedSlot && (
-            <p className="mt-3 text-sm font-bold text-green-700 bg-green-50 px-3 py-2 rounded-lg">
-              ✅ {new Date(selectedSlot.startTime).toLocaleDateString()} {formatTime(selectedSlot.startTime)} を選択中
-            </p>
+          ) : (
+            <>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="border-2 border-gray-200 rounded-xl px-4 py-2 mb-4 focus:outline-none focus:border-gray-600 text-sm"
+              />
+              {Object.keys(slotsByDate).length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">選択可能な枠がありません。</p>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(slotsByDate).map(([date, dateSlots]) => (
+                    <div key={date}>
+                      <p className="text-sm font-bold text-gray-500 mb-2">{date}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {dateSlots.map(slot => (
+                          <button
+                            key={slot.startTime}
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition ${selectedSlot?.startTime === slot.startTime ? "bg-gray-800 text-white border-gray-800" : "border-gray-200 text-gray-700 hover:border-gray-500"}`}
+                          >
+                            {formatTime(slot.startTime)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selectedSlot && (
+                <p className="mt-3 text-sm font-bold text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                  ✅ {new Date(selectedSlot.startTime).toLocaleDateString()} {formatTime(selectedSlot.startTime)} を選択中
+                </p>
+              )}
+            </>
           )}
         </section>
 
@@ -227,7 +296,7 @@ export default function AdminBookingPage() {
         {/* 確定ボタン */}
         <button
           onClick={handleSubmit}
-          disabled={!selectedCustomer || !selectedSlot || submitting}
+          disabled={!selectedCustomer || (manualMode ? (!manualDate || !manualTime) : !selectedSlot) || submitting}
           className="w-full py-4 bg-gray-800 text-white font-bold rounded-xl shadow-lg hover:bg-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {submitting ? "登録中..." : "予約を確定する"}

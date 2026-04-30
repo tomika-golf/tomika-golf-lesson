@@ -313,6 +313,9 @@ export default function BookingPage() {
                   const label = `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
 
                   if (slot.isBlockedByTimeToStart) {
+                    // 過去の枠は非表示
+                    if (new Date(slot.startTime) <= new Date()) return null;
+                    // 3時間以内の未来枠は「コーチに確認」
                     const isRequested = requestedSlots.has(slot.startTime);
                     const isRequesting = requestingSlot === slot.startTime;
                     return (
