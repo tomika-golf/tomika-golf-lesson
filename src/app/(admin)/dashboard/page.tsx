@@ -155,6 +155,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     setAdminRole(getAdminRole());
     fetchReservations();
+    const interval = setInterval(() => {
+      fetch("/api/admin/late-requests").then(r => r.json()).then(d => {
+        if (d.success) setLateRequests(d.requests);
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleComplete = async (res: AdminReservation) => {
