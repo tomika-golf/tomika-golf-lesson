@@ -8,15 +8,21 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
   const { data: req } = await admin
     .from('late_requests')
-    .select('user_id, start_time, lesson_type, profiles(name, line_user_id)')
+    .select('user_id, start_time, lesson_type')
     .eq('id', id)
     .single();
 
   if (!req) return NextResponse.json({ error: 'リクエストが見つかりません' }, { status: 404 });
 
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('name, line_user_id')
+    .eq('id', req.user_id)
+    .single();
+
   const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  const lineUserId = (req.profiles as any)?.line_user_id;
-  const customerName = (req.profiles as any)?.name ?? 'お客様';
+  const lineUserId = profile?.line_user_id;
+  const customerName = profile?.name ?? 'お客様';
   const lessonDate = new Date(req.start_time);
   const dateStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
   const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
