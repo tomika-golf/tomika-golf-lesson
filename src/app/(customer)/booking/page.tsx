@@ -27,6 +27,7 @@ export default function BookingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestingSlot, setRequestingSlot] = useState<string | null>(null);
   const [requestedSlots, setRequestedSlots] = useState<Set<string>>(new Set());
+  const [confirmSlot, setConfirmSlot] = useState<TimeSlot | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const showToast = (msg: string, ok = true) => {
@@ -174,6 +175,40 @@ export default function BookingPage() {
         </div>
       )}
 
+      {/* 直前予約 確認モーダル */}
+      {confirmSlot && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="text-center">
+              <p className="text-2xl mb-2">⚡</p>
+              <h3 className="font-bold text-gray-800 text-lg">コーチに確認しますか？</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {new Date(confirmSlot.startTime).getHours()}:{String(new Date(confirmSlot.startTime).getMinutes()).padStart(2, "0")} の枠
+              </p>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 leading-relaxed">
+              <p>この時間帯は通常の予約受付を締め切っています。</p>
+              <p className="mt-2">「送る」を押すと、コーチに直前での対応が可能かどうか確認の連絡をします。コーチから折り返しご連絡します。</p>
+              <p className="mt-2 text-xs text-orange-600">※ 確認リクエストは予約の確定ではありません。</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmSlot(null)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-600 font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => { setConfirmSlot(null); handleLateRequest(confirmSlot); }}
+                className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 transition"
+              >
+                確認を送る
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-brand text-white px-6 py-4 shadow-md sticky top-0 z-10 flex items-center justify-between">
         <h1 className="text-xl font-bold">🎯 レッスン予約</h1>
         <button onClick={() => router.back()} className="text-sm border border-white px-3 py-1 rounded">戻る</button>
@@ -283,7 +318,7 @@ export default function BookingPage() {
                     return (
                       <button
                         key={index}
-                        onClick={() => !isRequested && handleLateRequest(slot)}
+                        onClick={() => !isRequested && setConfirmSlot(slot)}
                         disabled={isRequested || isRequesting}
                         className={`py-3 px-2 rounded-lg border-2 text-center transition-all ${
                           isRequested

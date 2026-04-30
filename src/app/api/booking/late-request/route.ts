@@ -22,14 +22,22 @@ export async function POST(request: Request) {
     const customerName = profile?.name ?? 'お客様';
 
     const adminUserIds = (process.env.ADMIN_USER_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    console.log('[late-request] ADMIN_USER_IDS count:', adminUserIds.length);
+
     const { data: adminProfiles } = await admin
       .from('profiles')
-      .select('line_user_id')
+      .select('id, line_user_id')
       .in('id', adminUserIds);
+
+    console.log('[late-request] adminProfiles:', JSON.stringify(adminProfiles));
 
     const adminLineUserIds = (adminProfiles ?? []).map(p => p.line_user_id).filter(Boolean) as string[];
     if (adminLineUserIds.length === 0) {
-      return NextResponse.json({ error: '通知先が設定されていません' }, { status: 500 });
+      const reason = adminUserIds.length === 0
+        ? 'ADMIN_USER_IDSが未設定'
+        : `プロフィールにline_user_idなし（${adminUserIds.length}件のUUIDを検索）`;
+      console.error('[late-request] 通知先なし:', reason);
+      return NextResponse.json({ error: `通知先が設定されていません（${reason}）` }, { status: 500 });
     }
 
     const lessonDate = new Date(startTime);
