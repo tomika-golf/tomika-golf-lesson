@@ -17,8 +17,8 @@ async function queueReminders(
   if (!profile?.line_user_id) return;
 
   const lessonDate = new Date(startTime);
-  const lessonStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-  const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
+  const lessonStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric' });
+  const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
 
   // JST日付ベースで前日・当日の8時JST（= 23時UTC）を計算
   const lessonJST = new Date(lessonDate.getTime() + 9 * 60 * 60 * 1000);

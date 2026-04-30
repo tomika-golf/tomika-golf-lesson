@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     }
 
     const lessonDate = new Date(reservation.start_time);
-    const lessonStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-    const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
+    const lessonStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric' });
+    const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
     const customerName = (reservation.profiles as any)?.name ?? 'お客様';
 
     const message = `⚠️ 直前キャンセル申請\n\n${customerName} 様\n${lessonStr} ${timeStr}のレッスン\n\n管理画面から対応をお願いします。`;

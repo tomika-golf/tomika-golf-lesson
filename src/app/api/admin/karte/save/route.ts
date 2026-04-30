@@ -85,6 +85,7 @@ async function handleKarteNotification(reservationId: string, isEdit: boolean) {
   }
 
   const lessonDate = new Date(reservation.start_time).toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
     month: 'long',
     day: 'numeric',
   });
