@@ -24,8 +24,8 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   const lineUserId = profile?.line_user_id;
   const customerName = profile?.name ?? 'お客様';
   const lessonDate = new Date(req.start_time);
-  const dateStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-  const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
+  const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric' });
+  const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
   const lessonLabel = req.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
 
   const sendLine = async (message: string) => {

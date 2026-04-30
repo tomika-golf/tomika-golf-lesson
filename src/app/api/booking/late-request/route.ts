@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     }
 
     const lessonDate = new Date(startTime);
-    const dateStr = lessonDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-    const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
+    const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric' });
+    const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
     const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
 
     // late_requestsテーブルに保存
