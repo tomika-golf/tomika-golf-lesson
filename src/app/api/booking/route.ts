@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkBookingRules } from '@/utils/booking-rules';
+import { google } from 'googleapis';
 
 // 予約確定時にLINEで即時通知
 async function sendBookingConfirmation(
@@ -61,6 +62,36 @@ async function notifyAdmins(
       })
     )
   );
+}
+
+// 予約確定時にGoogleカレンダーにイベント登録
+async function addToGoogleCalendar(
+  customerName: string,
+  startTime: string,
+  endTime: string,
+  lessonType: string
+) {
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!calendarId || !serviceAccountJson) return;
+
+  const credentials = JSON.parse(serviceAccountJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
+
+  const calendar = google.calendar({ version: 'v3', auth });
+  const lessonLabel = lessonType === 'man-to-man' ? '50分' : '25分';
+
+  await calendar.events.insert({
+    calendarId,
+    requestBody: {
+      summary: `${customerName}様レッスン（${lessonLabel}）`,
+      start: { dateTime: startTime, timeZone: 'Asia/Tokyo' },
+      end: { dateTime: endTime, timeZone: 'Asia/Tokyo' },
+    },
+  });
 }
 
 // 予約作成時にLINEリマインダーをキューに登録
@@ -221,6 +252,11 @@ export async function POST(request: Request) {
     // リマインダーをキューに登録（失敗しても予約は成功とする）
     queueReminders(admin, userId, startTime).catch(err =>
       console.error('[リマインダー登録] エラー:', err)
+    );
+
+    // Googleカレンダーにイベント登録（失敗しても予約は成功とする）
+    addToGoogleCalendar(customerName, startTime, endTime, lessonType).catch(err =>
+      console.error('[Googleカレンダー登録] エラー:', err)
     );
 
     return NextResponse.json({ success: true, reservation: data });
