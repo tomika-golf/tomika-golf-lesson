@@ -12,8 +12,10 @@ function isRelevantEvent(summary: string): boolean {
 
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const isAdmin = searchParams.get('admin') === 'true';
     const calendarId = process.env.GOOGLE_CALENDAR_ID;
     if (!calendarId) {
       return NextResponse.json({ error: 'Calendar ID is not set.' }, { status: 500 });
@@ -62,7 +64,7 @@ export async function GET() {
       const end = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
       if (start && end) {
-        return sliceBlockIntoSlots(start, end, now, 3, existingReservations);
+        return sliceBlockIntoSlots(start, end, now, isAdmin ? 0 : 3, existingReservations);
       }
       return [];
     });

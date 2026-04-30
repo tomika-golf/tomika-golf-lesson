@@ -33,7 +33,7 @@ export default function AdminBookingPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/customers").then(r => r.json()),
-      fetch("/api/calendar/slots").then(r => r.json()),
+      fetch("/api/calendar/slots?admin=true").then(r => r.json()),
     ]).then(([cData, sData]) => {
       if (cData.success) setCustomers(cData.customers);
       if (sData.success) setSlots(sData.slots);
