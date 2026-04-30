@@ -170,19 +170,13 @@ export async function POST(request: Request) {
     const userId = user.id;
 
     const [profileResult, reservationsResult] = await Promise.all([
-      admin.from('profiles').select('id').eq('id', userId).single(),
+      admin.from('profiles').select('id, name').eq('id', userId).single(),
       admin.from('reservations').select('status, lesson_type').eq('user_id', userId),
     ]);
 
-    // プロフィールがない場合は自動作成
-    if (!profileResult.data) {
-      const { error: profileUpsertError } = await admin.from('profiles').upsert({
-        id: userId,
-        name: 'ゲスト',
-      }, { onConflict: 'id' });
-      if (profileUpsertError) {
-        return NextResponse.json({ success: false, error: `プロフィール作成失敗: ${profileUpsertError.message}` }, { status: 500 });
-      }
+    // 名前未登録の場合は予約不可
+    if (!profileResult.data || !profileResult.data.name || profileResult.data.name.trim() === '') {
+      return NextResponse.json({ success: false, error: 'お名前の登録が必要です。マイページから登録してください。' }, { status: 400 });
     }
 
     const userReservations = reservationsResult.data || [];

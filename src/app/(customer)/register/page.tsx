@@ -73,6 +73,8 @@ export default function RegisterPage() {
               placeholder="例：山田 太郎"
               className="w-full border-2 border-gray-200 rounded-xl p-3 text-base outline-none focus:border-green-500 transition-colors"
               autoFocus
+              required
+              minLength={2}
             />
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
           </div>
