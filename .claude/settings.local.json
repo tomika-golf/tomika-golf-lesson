@@ -16,7 +16,17 @@
       "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('dependencies:', JSON.stringify\\(pkg.dependencies, null, 2\\)\\)\")",
       "Bash(gh run *)",
       "Bash(npm install *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npm list *)",
+      "Bash(curl -s \"https://api.github.com/repos/tomika-golf/tomika-golf-lesson/commits?per_page=3\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(c['sha'][:7], c['commit']['message'].split\\('\\\\n'\\)[0]\\) for c in data]\")",
+      "Bash(ls -la .vercel)",
+      "Bash(cat vercel.json)",
+      "Bash(npx next *)",
+      "Bash(xargs grep *)",
+      "Bash(curl -s \"https://api.github.com/repos/tomika-golf/tomika-golf-lesson/issues?state=all&per_page=30\")",
+      "Bash(python -c ' *)",
+      "Bash(node -e \"const {GoogleGenerativeAI} = require\\('@google/generative-ai'\\); const g = new GoogleGenerativeAI\\('test'\\); console.log\\(Object.keys\\(g\\)\\); const m = g.getGenerativeModel\\({model:'test'}\\); console.log\\(Object.keys\\(m\\)\\);\")"
     ]
   }
 }

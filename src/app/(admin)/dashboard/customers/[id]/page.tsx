@@ -53,6 +53,9 @@ export default function CustomerDetailPage() {
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
+  const [lineMessage, setLineMessage] = useState('');
+  const [lineSending, setLineSending] = useState(false);
+  const [showLineForm, setShowLineForm] = useState(false);
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -91,6 +94,30 @@ export default function CustomerDetailPage() {
       alert("通信エラーが発生しました。");
     } finally {
       setNameLoading(false);
+    }
+  };
+
+  const handleLineSend = async () => {
+    if (!lineMessage.trim()) return;
+    setLineSending(true);
+    try {
+      const res = await fetch('/api/admin/line-user-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: customerId, message: lineMessage.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLineMessage('');
+        setShowLineForm(false);
+        alert('LINEを送信しました。');
+      } else {
+        alert('エラー: ' + data.error);
+      }
+    } catch {
+      alert('通信エラーが発生しました。');
+    } finally {
+      setLineSending(false);
     }
   };
 
@@ -227,6 +254,42 @@ export default function CustomerDetailPage() {
             <p className="text-sm text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-3">
               📌 管理メモ: {profile.admin_memo}
             </p>
+          )}
+
+          {/* LINEで連絡 */}
+          {!showLineForm ? (
+            <button
+              onClick={() => setShowLineForm(true)}
+              className="w-full text-sm bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
+            >
+              💬 LINEで連絡する
+            </button>
+          ) : (
+            <div className="space-y-2 border border-green-200 bg-green-50 rounded-lg p-3">
+              <p className="text-xs font-bold text-green-800">📩 {profile.name} 様へLINEを送信</p>
+              <textarea
+                value={lineMessage}
+                onChange={e => setLineMessage(e.target.value)}
+                rows={3}
+                placeholder="メッセージを入力..."
+                className="w-full border border-green-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-600"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleLineSend}
+                  disabled={lineSending || !lineMessage.trim()}
+                  className="flex-1 bg-green-600 text-white text-sm font-bold py-2 rounded-lg disabled:opacity-50"
+                >
+                  {lineSending ? '送信中...' : '送信'}
+                </button>
+                <button
+                  onClick={() => { setShowLineForm(false); setLineMessage(''); }}
+                  className="px-4 text-sm border rounded-lg text-gray-500"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
           )}
         </section>
 

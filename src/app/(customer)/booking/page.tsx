@@ -25,6 +25,8 @@ export default function BookingPage() {
   const [lessonType, setLessonType] = useState<"man-to-man" | "group">("man-to-man");
   const [memo, setMemo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requestingSlot, setRequestingSlot] = useState<string | null>(null);
+  const [requestedSlots, setRequestedSlots] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const showToast = (msg: string, ok = true) => {
@@ -108,6 +110,34 @@ export default function BookingPage() {
       showToast("通信エラーが発生しました。", false);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleLateRequest = async (slot: TimeSlot) => {
+    setRequestingSlot(slot.startTime);
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+      const res = await fetch("/api/booking/late-request", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          startTime: slot.startTime,
+          lessonType,
+          appBaseUrl: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRequestedSlots(prev => new Set(prev).add(slot.startTime));
+        showToast("コーチに確認リクエストを送りました！");
+      } else {
+        showToast("エラー: " + data.error, false);
+      }
+    } catch {
+      showToast("通信エラーが発生しました。", false);
+    } finally {
+      setRequestingSlot(null);
     }
   };
 
@@ -248,11 +278,24 @@ export default function BookingPage() {
                   const label = `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
 
                   if (slot.isBlockedByTimeToStart) {
+                    const isRequested = requestedSlots.has(slot.startTime);
+                    const isRequesting = requestingSlot === slot.startTime;
                     return (
-                      <div key={index} className="bg-gray-100 border-2 border-gray-200 text-gray-400 py-3 px-4 rounded-lg text-center opacity-70">
+                      <button
+                        key={index}
+                        onClick={() => !isRequested && handleLateRequest(slot)}
+                        disabled={isRequested || isRequesting}
+                        className={`py-3 px-2 rounded-lg border-2 text-center transition-all ${
+                          isRequested
+                            ? "bg-green-50 border-green-300 text-green-700 cursor-default"
+                            : "bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100 active:scale-95"
+                        }`}
+                      >
                         <span className="font-bold text-lg">{label}</span>
-                        <p className="text-xs mt-1">締切済</p>
-                      </div>
+                        <p className="text-xs mt-1 font-bold">
+                          {isRequesting ? "送信中..." : isRequested ? "✓ 確認依頼済" : "コーチに確認"}
+                        </p>
+                      </button>
                     );
                   }
 
