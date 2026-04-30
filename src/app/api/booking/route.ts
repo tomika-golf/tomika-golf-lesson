@@ -2,6 +2,38 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkBookingRules } from '@/utils/booking-rules';
 
+// 予約確定時にLINEで即時通知
+async function sendBookingConfirmation(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  startTime: string,
+  lessonType: string
+) {
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('line_user_id')
+    .eq('id', userId)
+    .single();
+
+  if (!profile?.line_user_id) return;
+
+  const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!lineToken) return;
+
+  const lessonDate = new Date(startTime);
+  const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
+  const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
+  const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+
+  const message = `✅ ご予約が確定しました！\n\n📅 ${dateStr} ${timeStr}\n🏌️ ${lessonLabel}\n\n当日お気をつけてお越しください。\n前日・当日の朝8時にもリマインダーをお送りします。\n\nキャンセルは3時間前まで\nメニューの「レッスンはこちら」から行えます。\n\n富加ゴルフ`;
+
+  await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${lineToken}` },
+    body: JSON.stringify({ to: profile.line_user_id, messages: [{ type: 'text', text: message }] }),
+  });
+}
+
 // 予約作成時にLINEリマインダーをキューに登録
 async function queueReminders(
   admin: ReturnType<typeof createAdminClient>,
@@ -141,7 +173,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: `予約の保存に失敗しました: ${error.message}` }, { status: 500 });
     }
 
-    // #2: リマインダーをキューに登録（失敗しても予約は成功とする）
+    // 予約確定LINE通知（失敗しても予約は成功とする）
+    sendBookingConfirmation(admin, userId, startTime, lessonType).catch(err =>
+      console.error('[予約確定LINE] エラー:', err)
+    );
+
+    // リマインダーをキューに登録（失敗しても予約は成功とする）
     queueReminders(admin, userId, startTime).catch(err =>
       console.error('[リマインダー登録] エラー:', err)
     );
