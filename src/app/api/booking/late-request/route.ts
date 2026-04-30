@@ -45,8 +45,16 @@ export async function POST(request: Request) {
     const timeStr = `${lessonDate.getHours()}:${String(lessonDate.getMinutes()).padStart(2, '0')}`;
     const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
 
-    const adminLink = `${appBaseUrl}/dashboard/customers/${user.id}`;
-    const message = `⚡ 直前予約リクエスト\n\n${customerName} 様\n${dateStr} ${timeStr}（${lessonLabel}）\n\n対応可能な場合は代理予約、難しい場合は顧客ページからLINEで連絡してください。\n\n▼ 顧客ページ\n${adminLink}`;
+    // late_requestsテーブルに保存
+    await admin.from('late_requests').insert({
+      user_id: user.id,
+      start_time: startTime,
+      lesson_type: lessonType,
+      status: 'pending',
+    });
+
+    const adminLink = `${appBaseUrl}/dashboard`;
+    const message = `⚡ 直前予約リクエスト\n\n${customerName} 様\n${dateStr} ${timeStr}（${lessonLabel}）\n\n管理ダッシュボードで対応してください。\n${adminLink}`;
 
     const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     if (!lineToken) return NextResponse.json({ error: 'LINE設定が不完全です' }, { status: 500 });

@@ -31,6 +31,14 @@ function getAdminRole(): string {
   return match?.[1] ?? 'full';
 }
 
+type LateRequest = {
+  id: string;
+  user_id: string;
+  start_time: string;
+  lesson_type: 'man-to-man' | 'group';
+  profiles: { name: string };
+};
+
 type LineTarget = {
   reservationId: string;
   customerName: string;
@@ -42,6 +50,11 @@ export default function AdminDashboard() {
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [pendingKartes, setPendingKartes] = useState<PendingKarte[]>([]);
   const [oldUnprocessed, setOldUnprocessed] = useState<AdminReservation[]>([]);
+  const [lateRequests, setLateRequests] = useState<LateRequest[]>([]);
+  const [lateActionLoading, setLateActionLoading] = useState<string | null>(null);
+  const [lateLineTarget, setLateLineTarget] = useState<LateRequest | null>(null);
+  const [lateLineMessage, setLateLineMessage] = useState('');
+  const [lateLineSending, setLateLineSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingOld, setLoadingOld] = useState(false);
   const [showOld, setShowOld] = useState(false);
@@ -50,6 +63,7 @@ export default function AdminDashboard() {
   const [lineMessage, setLineMessage] = useState('');
   const [lineSending, setLineSending] = useState(false);
   const [lineToast, setLineToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [calendarFilter, setCalendarFilter] = useState('');
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -58,16 +72,69 @@ export default function AdminDashboard() {
 
   const fetchReservations = async () => {
     try {
-      const [resData, pendingData] = await Promise.all([
+      const [resData, pendingData, lateData] = await Promise.all([
         fetch("/api/admin/reservations").then(r => r.json()),
         fetch("/api/admin/karte/pending").then(r => r.json()),
+        fetch("/api/admin/late-requests").then(r => r.json()),
       ]);
       if (resData.success) setReservations(resData.reservations);
       if (pendingData.success) setPendingKartes(pendingData.pending);
+      if (lateData.success) setLateRequests(lateData.requests);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLateAction = async (id: string, action: 'book' | 'reject') => {
+    const req = lateRequests.find(r => r.id === id);
+    if (!req) return;
+    const label = action === 'book' ? '予約を確定してLINEで通知します' : '予約不可のLINEを送ります';
+    if (!window.confirm(`${(req.profiles as any)?.name} 様\n${label}\nよろしいですか？`)) return;
+    setLateActionLoading(id + action);
+    try {
+      const res = await fetch(`/api/admin/late-requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLateRequests(prev => prev.filter(r => r.id !== id));
+        if (action === 'book') fetchReservations();
+        showLineToast(action === 'book' ? '予約を確定し、LINEで通知しました' : '予約不可のLINEを送りました');
+      } else {
+        alert('エラー: ' + data.error);
+      }
+    } catch {
+      alert('通信エラーが発生しました。');
+    } finally {
+      setLateActionLoading(null);
+    }
+  };
+
+  const sendLateLineMessage = async () => {
+    if (!lateLineTarget || !lateLineMessage.trim()) return;
+    setLateLineSending(true);
+    try {
+      const res = await fetch('/api/admin/line-user-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: lateLineTarget.user_id, message: lateLineMessage }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLateLineTarget(null);
+        setLateLineMessage('');
+        showLineToast('LINEを送信しました');
+      } else {
+        showLineToast(data.error || '送信失敗', false);
+      }
+    } catch {
+      showLineToast('通信エラー', false);
+    } finally {
+      setLateLineSending(false);
     }
   };
 
@@ -175,6 +242,28 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* 直前リクエスト LINEモーダル */}
+      {lateLineTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <p className="font-black text-gray-800 text-lg">📩 LINEを送る</p>
+            <p className="text-sm text-gray-500">{(lateLineTarget.profiles as any)?.name} 様</p>
+            <textarea
+              value={lateLineMessage}
+              onChange={e => setLateLineMessage(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
+              placeholder="メッセージを入力..."
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setLateLineTarget(null); setLateLineMessage(''); }} className="flex-1 py-2 border-2 border-gray-300 rounded-xl font-bold text-gray-600 text-sm">キャンセル</button>
+              <button onClick={sendLateLineMessage} disabled={lateLineSending || !lateLineMessage.trim()} className="flex-1 py-2 bg-green-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                {lateLineSending ? '送信中...' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {lineTarget && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
@@ -218,6 +307,58 @@ export default function AdminDashboard() {
       </header>
 
       <main className="p-4 max-w-4xl mx-auto space-y-6 mt-4">
+
+        {/* ⚡ 直前予約リクエスト */}
+        {lateRequests.length > 0 && adminRole !== 'staff' && (
+          <section>
+            <h2 className="text-xl font-bold text-purple-700 mb-4 border-b-2 border-purple-300 pb-2 flex items-center gap-2">
+              ⚡ 直前予約リクエスト <span className="text-sm bg-purple-600 text-white px-2 py-0.5 rounded-full">{lateRequests.length}件</span>
+            </h2>
+            <div className="space-y-3">
+              {lateRequests.map(req => {
+                const d = new Date(req.start_time);
+                const dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
+                const timeStr = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+                const lessonLabel = req.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+                return (
+                  <div key={req.id} className="bg-purple-50 p-5 rounded-xl shadow-sm border-l-4 border-purple-400">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold px-2 py-1 rounded bg-purple-100 text-purple-700">{lessonLabel}</span>
+                          <span className="text-gray-600 text-sm font-bold">{dateStr} {timeStr}</span>
+                        </div>
+                        <h3 className="font-black text-xl text-gray-800 mt-1">{(req.profiles as any)?.name ?? '名称未設定'} 様</h3>
+                      </div>
+                      <div className="flex flex-col gap-2 min-w-[200px]">
+                        <button
+                          onClick={() => handleLateAction(req.id, 'book')}
+                          disabled={lateActionLoading !== null}
+                          className="w-full py-2.5 bg-green-600 text-white font-bold rounded-lg shadow hover:bg-green-700 transition text-sm disabled:opacity-50"
+                        >
+                          ✅ 予約する（LINE通知）
+                        </button>
+                        <button
+                          onClick={() => handleLateAction(req.id, 'reject')}
+                          disabled={lateActionLoading !== null}
+                          className="w-full py-2 bg-red-100 text-red-700 font-bold rounded-lg text-sm hover:bg-red-200 transition disabled:opacity-50"
+                        >
+                          ❌ 予約不可（定型文LINE）
+                        </button>
+                        <button
+                          onClick={() => { setLateLineTarget(req); setLateLineMessage(''); }}
+                          className="w-full py-2 bg-green-100 text-green-700 font-bold rounded-lg text-sm hover:bg-green-200 transition"
+                        >
+                          📩 LINEで連絡
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ① 対応待ち：時間が過ぎたのにまだ「確定」のままの予約 */}
         {(() => {
@@ -364,16 +505,32 @@ export default function AdminDashboard() {
 
         {/* ③ 今後の予約一覧 */}
         <section>
-          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">
-            📍 今後の予約一覧
-          </h2>
+          <div className="flex items-center justify-between mb-4 border-b-2 border-gray-300 pb-2">
+            <h2 className="text-xl font-bold text-gray-800">📍 予約一覧</h2>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={calendarFilter}
+                onChange={e => setCalendarFilter(e.target.value)}
+                className="border-2 border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+              />
+              {calendarFilter && (
+                <button onClick={() => setCalendarFilter('')} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 border rounded-lg">
+                  クリア
+                </button>
+              )}
+            </div>
+          </div>
           {(() => {
             const now = new Date();
-            const upcoming = reservations.filter(
+            const base = reservations.filter(
               r => r.status !== 'cancelled' && !(r.status === 'confirmed' && new Date(r.end_time) < now)
             );
+            const upcoming = calendarFilter
+              ? base.filter(r => new Date(r.start_time).toISOString().slice(0, 10) === calendarFilter)
+              : base;
             if (upcoming.length === 0) {
-              return <p className="text-gray-500 bg-white p-6 rounded text-center">現在、予定されているレッスンはありません。</p>;
+              return <p className="text-gray-500 bg-white p-6 rounded text-center">{calendarFilter ? `${calendarFilter} の予約はありません。` : '現在、予定されているレッスンはありません。'}</p>;
             }
             return (
               <div className="space-y-4">
