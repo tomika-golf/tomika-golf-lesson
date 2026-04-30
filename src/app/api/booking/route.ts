@@ -34,6 +34,35 @@ async function sendBookingConfirmation(
   });
 }
 
+// 管理者全員にLINE通知を送る共通関数
+async function notifyAdmins(
+  admin: ReturnType<typeof createAdminClient>,
+  message: string
+) {
+  const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!lineToken) return;
+
+  const adminUserIds = (process.env.ADMIN_USER_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  if (adminUserIds.length === 0) return;
+
+  const { data: adminProfiles } = await admin
+    .from('profiles')
+    .select('line_user_id')
+    .in('id', adminUserIds);
+
+  const lineUserIds = (adminProfiles ?? []).map(p => p.line_user_id).filter(Boolean) as string[];
+
+  await Promise.all(
+    lineUserIds.map(lineUserId =>
+      fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${lineToken}` },
+        body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: message }] }),
+      })
+    )
+  );
+}
+
 // 予約作成時にLINEリマインダーをキューに登録
 async function queueReminders(
   admin: ReturnType<typeof createAdminClient>,
@@ -173,9 +202,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: `予約の保存に失敗しました: ${error.message}` }, { status: 500 });
     }
 
-    // 予約確定LINE通知（失敗しても予約は成功とする）
+    // お客様への予約確定LINE通知
     sendBookingConfirmation(admin, userId, startTime, lessonType).catch(err =>
       console.error('[予約確定LINE] エラー:', err)
+    );
+
+    // 管理者への新規予約通知
+    const { data: customerProfile } = await admin.from('profiles').select('name').eq('id', userId).single();
+    const customerName = customerProfile?.name ?? 'お客様';
+    const bookingDate = new Date(startTime);
+    const bookingDateStr = bookingDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
+    const bookingTimeStr = bookingDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
+    const bookingLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+    notifyAdmins(admin, `📅 新規予約が入りました！\n\n👤 ${customerName} 様\n🗓️ ${bookingDateStr} ${bookingTimeStr}\n🏌️ ${bookingLabel}`).catch(err =>
+      console.error('[管理者通知] エラー:', err)
     );
 
     // リマインダーをキューに登録（失敗しても予約は成功とする）

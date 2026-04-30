@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { differenceInHours } from 'date-fns';
 
+async function notifyAdmins(admin: ReturnType<typeof createAdminClient>, message: string) {
+  const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!lineToken) return;
+  const adminUserIds = (process.env.ADMIN_USER_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  if (adminUserIds.length === 0) return;
+  const { data: adminProfiles } = await admin.from('profiles').select('line_user_id').in('id', adminUserIds);
+  const lineUserIds = (adminProfiles ?? []).map(p => p.line_user_id).filter(Boolean) as string[];
+  await Promise.all(
+    lineUserIds.map(lineUserId =>
+      fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${lineToken}` },
+        body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: message }] }),
+      })
+    )
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const { reservationId, cancelReason } = await request.json();
@@ -50,6 +68,18 @@ export async function POST(request: Request) {
     if (updateError) {
       throw updateError;
     }
+
+    // 管理者へキャンセル通知（失敗しても成功とする）
+    const { data: profile } = await admin.from('profiles').select('name').eq('id', userId).single();
+    const customerName = profile?.name ?? 'お客様';
+    const lessonDate = new Date(reservation.start_time);
+    const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
+    const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
+    const lessonLabel = reservation.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+    const reasonText = cancelReason ? `\n📝 理由：${cancelReason}` : '';
+    notifyAdmins(admin, `❌ 予約がキャンセルされました\n\n👤 ${customerName} 様\n🗓️ ${dateStr} ${timeStr}\n🏌️ ${lessonLabel}${reasonText}`).catch(err =>
+      console.error('[キャンセル管理者通知] エラー:', err)
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
