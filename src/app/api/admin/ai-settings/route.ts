@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { KARTE_SYSTEM_PROMPT, CUSTOMER_CHAT_SYSTEM_PROMPT } from '@/utils/ai-prompts';
 
 export async function GET() {
   const admin = createAdminClient();
   const { data } = await admin.from('ai_settings').select('prompt_template, customer_prompt_template').eq('id', 1).single();
   return NextResponse.json({
     success: true,
-    prompt: data?.prompt_template ?? '',
-    customerPrompt: data?.customer_prompt_template ?? '',
+    prompt: data?.prompt_template || KARTE_SYSTEM_PROMPT.trim(),
+    customerPrompt: data?.customer_prompt_template || CUSTOMER_CHAT_SYSTEM_PROMPT.trim(),
   });
 }
 
