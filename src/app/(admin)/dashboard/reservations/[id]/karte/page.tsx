@@ -151,56 +151,12 @@ export default function KarteInputPage() {
     try {
       let res: Response;
 
-      if (audioFile.size > 4 * 1024 * 1024) {
-        // 大きいファイル: Supabase Storage経由でアップロード
-        setTranscribeStep(`アップロード中... (${(audioFile.size / 1024 / 1024).toFixed(1)}MB)`);
-        const urlRes = await fetch('/api/admin/karte/upload-audio-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName: audioFile.name, mimeType: audioFile.type }),
-        });
-        const urlData = await urlRes.json();
-        if (!urlData.signedUrl) throw new Error(`[1/3] アップロードURL取得失敗: ${urlData.error || 'unknown'}`);
-
-        // URL検証と診断
-        try { new URL(urlData.signedUrl); }
-        catch { throw new Error(`[v6-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
-        setTranscribeStep('ファイル読込中...');
-        // FileReaderで明示的に読み込む（iCloud等の未ダウンロードファイル対策）
-        const audioBuffer = await new Promise<ArrayBuffer>((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = e => res(e.target!.result as ArrayBuffer);
-          reader.onerror = e => rej(new Error(`[v8-ファイル読込失敗] ${e.target?.error?.name}: ${e.target?.error?.message}`));
-          reader.readAsArrayBuffer(audioFile);
-        });
-
-        setTranscribeStep('Supabaseへ送信中...');
-        const mimeType = (audioFile.type || 'audio/mp4').replace(/[^\w/+.-]/g, '');
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('PUT', urlData.signedUrl);
-          xhr.setRequestHeader('Content-Type', mimeType);
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`[v8-HTTP${xhr.status}] ${xhr.responseText.substring(0, 150)}`));
-          };
-          xhr.onerror = () => reject(new Error('[v8-XHRネットワーク失敗]'));
-          xhr.send(audioBuffer);
-        });
-
-        setTranscribeStep('文字起こし中（1〜2分かかります）...');
-        res = await fetch('/api/admin/karte/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storagePath: urlData.path, mimeType: audioFile.type }),
-        });
-      } else {
-        // 小さいファイル（4MB以下）: 従来の方式
-        setTranscribeStep('文字起こし中...');
-        const form = new FormData();
-        form.append('audio', audioFile);
-        res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
-      }
+      // Supabase直接アップロード（CORS問題）を回避し、サーバー経由で処理
+      setTranscribeStep(`送信中... (${(audioFile.size / 1024 / 1024).toFixed(1)}MB、時間がかかります)`);
+      const form = new FormData();
+      form.append('audio', audioFile);
+      setTranscribeStep('文字起こし中（1〜2分かかります）...');
+      res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
 
       const data = await res.json();
       if (data.success) {
@@ -210,7 +166,7 @@ export default function KarteInputPage() {
         alert('文字起こしエラー: ' + data.error);
       }
     } catch (err) {
-      alert('[v8] エラー: ' + (err instanceof Error ? err.message : String(err)));
+      alert('エラー: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
       setTranscribeStep('');
