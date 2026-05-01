@@ -165,21 +165,27 @@ export default function KarteInputPage() {
         // URL検証と診断
         try { new URL(urlData.signedUrl); }
         catch { throw new Error(`[v6-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
-        const _u = String(urlData.signedUrl);
-        alert(`[v7-診断] 文字数:${_u.length} +含む:${_u.includes('+')} 末尾50:${_u.slice(-50)}`);
+        setTranscribeStep('ファイル読込中...');
+        // FileReaderで明示的に読み込む（iCloud等の未ダウンロードファイル対策）
+        const audioBuffer = await new Promise<ArrayBuffer>((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = e => res(e.target!.result as ArrayBuffer);
+          reader.onerror = e => rej(new Error(`[v8-ファイル読込失敗] ${e.target?.error?.name}: ${e.target?.error?.message}`));
+          reader.readAsArrayBuffer(audioFile);
+        });
 
         setTranscribeStep('Supabaseへ送信中...');
-        // arrayBuffer()変換を省略しFileオブジェクトを直接XHRに渡す
+        const mimeType = (audioFile.type || 'audio/mp4').replace(/[^\w/+.-]/g, '');
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('PUT', urlData.signedUrl);
-          xhr.setRequestHeader('Content-Type', audioFile.type || 'audio/mp4');
+          xhr.setRequestHeader('Content-Type', mimeType);
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`[v5-HTTP${xhr.status}] ${xhr.responseText.substring(0, 100)}`));
+            else reject(new Error(`[v8-HTTP${xhr.status}] ${xhr.responseText.substring(0, 150)}`));
           };
-          xhr.onerror = () => reject(new Error('[v5-XHR失敗]'));
-          xhr.send(audioFile);
+          xhr.onerror = () => reject(new Error('[v8-XHRネットワーク失敗]'));
+          xhr.send(audioBuffer);
         });
 
         setTranscribeStep('文字起こし中（1〜2分かかります）...');
@@ -204,7 +210,7 @@ export default function KarteInputPage() {
         alert('文字起こしエラー: ' + data.error);
       }
     } catch (err) {
-      alert('[v7] エラー: ' + (err instanceof Error ? err.message : String(err)));
+      alert('[v8] エラー: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
       setTranscribeStep('');
