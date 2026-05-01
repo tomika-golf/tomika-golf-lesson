@@ -69,7 +69,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const systemInstruction = CUSTOMER_CHAT_SYSTEM_PROMPT + formatKarteDataForPrompt(karteData);
+    const { data: aiSettings } = await admin.from('ai_settings').select('customer_prompt_template').eq('id', 1).single();
+    const basePrompt = aiSettings?.customer_prompt_template?.trim() || CUSTOMER_CHAT_SYSTEM_PROMPT;
+    const systemInstruction = basePrompt + formatKarteDataForPrompt(karteData);
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', systemInstruction });
 

@@ -1,6 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { differenceInHours } from 'date-fns';
+import { google } from 'googleapis';
+
+async function deleteFromGoogleCalendar(startTime: string) {
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!calendarId || !serviceAccountJson) return;
+
+  const credentials = JSON.parse(serviceAccountJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const start = new Date(startTime);
+  const end = new Date(start.getTime() + 60 * 1000);
+
+  const { data } = await calendar.events.list({
+    calendarId,
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+    singleEvents: true,
+  });
+
+  await Promise.all(
+    (data.items ?? []).map(e => calendar.events.delete({ calendarId, eventId: e.id! }))
+  );
+}
 
 async function notifyAdmins(admin: ReturnType<typeof createAdminClient>, message: string) {
   const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -79,6 +107,11 @@ export async function POST(request: Request) {
     const reasonText = cancelReason ? `\n📝 理由：${cancelReason}` : '';
     notifyAdmins(admin, `❌ 予約がキャンセルされました\n\n👤 ${customerName} 様\n🗓️ ${dateStr} ${timeStr}\n🏌️ ${lessonLabel}${reasonText}`).catch(err =>
       console.error('[キャンセル管理者通知] エラー:', err)
+    );
+
+    // Googleカレンダーから予定を削除（失敗しても成功とする）
+    deleteFromGoogleCalendar(reservation.start_time).catch(err =>
+      console.error('[Googleカレンダー削除] エラー:', err)
     );
 
     return NextResponse.json({ success: true });
