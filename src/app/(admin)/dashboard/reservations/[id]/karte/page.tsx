@@ -36,6 +36,7 @@ export default function KarteInputPage() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribeStep, setTranscribeStep] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -146,15 +147,42 @@ export default function KarteInputPage() {
 
   const handleTranscribe = async () => {
     if (!audioFile) return;
-    if (audioFile.size > 4 * 1024 * 1024) {
-      alert('ファイルサイズが大きすぎます（上限4MB）。\n\niPhoneの場合：ボイスメモ → 録音を選ぶ → 「・・・」→「共有」→「音質を下げる」を選んでから保存してください。');
-      return;
-    }
     setIsTranscribing(true);
     try {
-      const form = new FormData();
-      form.append('audio', audioFile);
-      const res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
+      let res: Response;
+
+      if (audioFile.size > 4 * 1024 * 1024) {
+        // 大きいファイル: Supabase Storage経由でアップロード
+        setTranscribeStep('アップロード中...');
+        const urlRes = await fetch('/api/admin/karte/upload-audio-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: audioFile.name, mimeType: audioFile.type }),
+        });
+        const urlData = await urlRes.json();
+        if (!urlData.signedUrl) throw new Error('アップロードURLの取得に失敗しました');
+
+        const uploadRes = await fetch(urlData.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': audioFile.type || 'audio/mp4' },
+          body: audioFile,
+        });
+        if (!uploadRes.ok) throw new Error('ファイルのアップロードに失敗しました');
+
+        setTranscribeStep('文字起こし中...');
+        res = await fetch('/api/admin/karte/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePath: urlData.path, mimeType: audioFile.type }),
+        });
+      } else {
+        // 小さいファイル（4MB以下）: 従来の方式
+        setTranscribeStep('文字起こし中...');
+        const form = new FormData();
+        form.append('audio', audioFile);
+        res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
+      }
+
       const data = await res.json();
       if (data.success) {
         setNotes(prev => prev ? prev + '\n\n【文字起こし】\n' + data.text : '【文字起こし】\n' + data.text);
@@ -162,10 +190,11 @@ export default function KarteInputPage() {
       } else {
         alert('文字起こしエラー: ' + data.error);
       }
-    } catch {
-      alert('通信エラーが発生しました。');
+    } catch (err) {
+      alert('エラーが発生しました: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
+      setTranscribeStep('');
     }
   };
 
@@ -327,11 +356,8 @@ export default function KarteInputPage() {
                   {isTranscribing ? '変換中...' : 'AI文字起こし'}
                 </button>
               </div>
-              {audioFile && audioFile.size > 4 * 1024 * 1024 && (
-                <p className="text-xs text-red-600">⚠️ 4MB超えています。ボイスメモ→共有時に「音質を下げる」を選んでください。</p>
-              )}
               {isTranscribing && (
-                <p className="text-xs text-blue-600 animate-pulse">● AIが文字起こし中です（50分の音声で約1〜2分かかります）...</p>
+                <p className="text-xs text-blue-600 animate-pulse">● {transcribeStep}（長い録音ほど時間がかかります）</p>
               )}
             </div>
 
