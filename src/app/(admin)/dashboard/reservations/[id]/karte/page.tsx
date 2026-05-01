@@ -162,13 +162,22 @@ export default function KarteInputPage() {
         const urlData = await urlRes.json();
         if (!urlData.signedUrl) throw new Error(`[1/3] アップロードURL取得失敗: ${urlData.error || 'unknown'}`);
 
+        // URL検証
+        try { new URL(urlData.signedUrl); }
+        catch { throw new Error(`[URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
+
         setTranscribeStep('Supabaseへ送信中...');
+        // FileをBlobに変換してiOS WebView互換性を上げる
+        const audioBlob = new Blob([await audioFile.arrayBuffer()], { type: audioFile.type || 'audio/mp4' });
         const uploadRes = await fetch(urlData.signedUrl, {
           method: 'PUT',
           headers: { 'Content-Type': audioFile.type || 'audio/mp4' },
-          body: audioFile,
+          body: audioBlob,
         });
-        if (!uploadRes.ok) throw new Error(`[2/3] Supabaseアップロード失敗: HTTP ${uploadRes.status}`);
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text().catch(() => '');
+          throw new Error(`[2/3] Supabaseアップロード失敗: HTTP ${uploadRes.status} ${errText.substring(0, 100)}`);
+        }
 
         setTranscribeStep('文字起こし中（1〜2分かかります）...');
         res = await fetch('/api/admin/karte/transcribe', {
