@@ -146,8 +146,8 @@ export default function KarteInputPage() {
 
   const handleTranscribe = async () => {
     if (!audioFile) return;
-    if (audioFile.size > 19 * 1024 * 1024) {
-      alert('ファイルサイズが大きすぎます（上限19MB）。\n\niPhoneの場合：ボイスメモ → 共有 → 「音質を下げる」を選択してください。');
+    if (audioFile.size > 4 * 1024 * 1024) {
+      alert('ファイルサイズが大きすぎます（上限4MB）。\n\niPhoneの場合：ボイスメモ → 録音を選ぶ → 「・・・」→「共有」→「音質を下げる」を選んでから保存してください。');
       return;
     }
     setIsTranscribing(true);
@@ -327,8 +327,8 @@ export default function KarteInputPage() {
                   {isTranscribing ? '変換中...' : 'AI文字起こし'}
                 </button>
               </div>
-              {audioFile && audioFile.size > 19 * 1024 * 1024 && (
-                <p className="text-xs text-red-600">⚠️ 19MB超えています。ボイスメモ→共有時に「音質を下げる」を選んでください。</p>
+              {audioFile && audioFile.size > 4 * 1024 * 1024 && (
+                <p className="text-xs text-red-600">⚠️ 4MB超えています。ボイスメモ→共有時に「音質を下げる」を選んでください。</p>
               )}
               {isTranscribing && (
                 <p className="text-xs text-blue-600 animate-pulse">● AIが文字起こし中です（50分の音声で約1〜2分かかります）...</p>
