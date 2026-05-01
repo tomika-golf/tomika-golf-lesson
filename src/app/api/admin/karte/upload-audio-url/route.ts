@@ -12,7 +12,14 @@ export async function POST(request: Request) {
       .from('audio-temp')
       .createSignedUploadUrl(path);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error('[upload-audio-url] Supabase error:', error);
+      return NextResponse.json({ error: `Supabase: ${error.message}` }, { status: 500 });
+    }
+    if (!data?.signedUrl) {
+      console.error('[upload-audio-url] signedUrl missing. data:', data);
+      return NextResponse.json({ error: 'signedUrlが返されませんでした' }, { status: 500 });
+    }
 
     return NextResponse.json({ signedUrl: data.signedUrl, path });
   } catch (error: unknown) {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const PROMPT = 'この音声はゴルフレッスン中のコーチと生徒の会話です。ゴルフ用語が含まれます。話されている内容をそのまま文字起こしして、発言内容のみを出力してください。余計な説明や前置きは不要です。';
 
@@ -101,13 +101,15 @@ async function uploadToGeminiFileApi(apiKey: string, bytes: ArrayBuffer, mimeTyp
   // ACTIVEになるまで待機
   const fileId = fileUri.match(/files\/([^?/]+)/)?.[1];
   if (fileId) {
-    for (let i = 0; i < 15; i++) {
+    let activated = false;
+    for (let i = 0; i < 30; i++) {
       const stateRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/files/${fileId}?key=${apiKey}`);
       const { state } = await stateRes.json();
-      if (state === 'ACTIVE') break;
+      if (state === 'ACTIVE') { activated = true; break; }
       if (state === 'FAILED') throw new Error('Gemini file processing failed');
       await new Promise(r => setTimeout(r, 2000));
     }
+    if (!activated) throw new Error('Gemini file did not become ACTIVE within 60s');
   }
 
   return fileUri;
