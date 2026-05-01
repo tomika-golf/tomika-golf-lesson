@@ -162,9 +162,10 @@ export default function KarteInputPage() {
         const urlData = await urlRes.json();
         if (!urlData.signedUrl) throw new Error(`[1/3] アップロードURL取得失敗: ${urlData.error || 'unknown'}`);
 
-        // URL検証
+        // URL検証と診断
         try { new URL(urlData.signedUrl); }
-        catch { throw new Error(`[v4-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
+        catch { throw new Error(`[v6-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
+        alert('[v6-診断] URL先頭: ' + String(urlData.signedUrl).substring(0, 80));
 
         setTranscribeStep('Supabaseへ送信中...');
         // arrayBuffer()変換を省略しFileオブジェクトを直接XHRに渡す
@@ -202,7 +203,7 @@ export default function KarteInputPage() {
         alert('文字起こしエラー: ' + data.error);
       }
     } catch (err) {
-      alert('[v5] エラー: ' + (err instanceof Error ? err.message : String(err)));
+      alert('[v6] エラー: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
       setTranscribeStep('');
