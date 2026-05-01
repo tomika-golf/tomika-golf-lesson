@@ -59,3 +59,57 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ success: true, successCount, errors });
 }
+
+// キャンセル済み予約のカレンダーイベントを一括削除
+export async function DELETE() {
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!calendarId || !serviceAccountJson) {
+    return NextResponse.json({ error: 'Google Calendar環境変数が未設定です' }, { status: 500 });
+  }
+
+  const credentials = JSON.parse(serviceAccountJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const admin = createAdminClient();
+
+  const { data: reservations, error } = await admin
+    .from('reservations')
+    .select('id, start_time')
+    .eq('status', 'cancelled')
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  let deletedCount = 0;
+  const errors: string[] = [];
+
+  for (const r of reservations ?? []) {
+    try {
+      const start = new Date(r.start_time);
+      const end = new Date(start.getTime() + 60 * 1000);
+
+      const { data } = await calendar.events.list({
+        calendarId,
+        timeMin: start.toISOString(),
+        timeMax: end.toISOString(),
+        singleEvents: true,
+      });
+
+      for (const event of data.items ?? []) {
+        await calendar.events.delete({ calendarId, eventId: event.id! });
+        deletedCount++;
+      }
+    } catch (e: any) {
+      errors.push(`予約ID ${r.id}: ${e.message}`);
+    }
+  }
+
+  return NextResponse.json({ success: true, deletedCount, errors });
+}
