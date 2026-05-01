@@ -164,20 +164,22 @@ export default function KarteInputPage() {
 
         // URL検証
         try { new URL(urlData.signedUrl); }
-        catch { throw new Error(`[URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
+        catch { throw new Error(`[v4-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
 
         setTranscribeStep('Supabaseへ送信中...');
-        // FileをBlobに変換してiOS WebView互換性を上げる
-        const audioBlob = new Blob([await audioFile.arrayBuffer()], { type: audioFile.type || 'audio/mp4' });
-        const uploadRes = await fetch(urlData.signedUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': audioFile.type || 'audio/mp4' },
-          body: audioBlob,
+        const audioBytes = await audioFile.arrayBuffer();
+        // LINE WebViewのfetch制限を回避するためXHRを使用
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', urlData.signedUrl);
+          xhr.setRequestHeader('Content-Type', audioFile.type || 'audio/mp4');
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) resolve();
+            else reject(new Error(`[v4-2/3] アップロード失敗: HTTP ${xhr.status} ${xhr.responseText.substring(0, 100)}`));
+          };
+          xhr.onerror = () => reject(new Error('[v4-2/3] ネットワークエラー'));
+          xhr.send(audioBytes);
         });
-        if (!uploadRes.ok) {
-          const errText = await uploadRes.text().catch(() => '');
-          throw new Error(`[2/3] Supabaseアップロード失敗: HTTP ${uploadRes.status} ${errText.substring(0, 100)}`);
-        }
 
         setTranscribeStep('文字起こし中（1〜2分かかります）...');
         res = await fetch('/api/admin/karte/transcribe', {
@@ -201,7 +203,7 @@ export default function KarteInputPage() {
         alert('文字起こしエラー: ' + data.error);
       }
     } catch (err) {
-      alert('エラー詳細: ' + (err instanceof Error ? err.message : String(err)));
+      alert('[v4] エラー: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
       setTranscribeStep('');
