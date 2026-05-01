@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 
 type Reservation = {
@@ -151,12 +152,31 @@ export default function KarteInputPage() {
     try {
       let res: Response;
 
-      // Supabase直接アップロード（CORS問題）を回避し、サーバー経由で処理
-      setTranscribeStep(`送信中... (${(audioFile.size / 1024 / 1024).toFixed(1)}MB、時間がかかります)`);
-      const form = new FormData();
-      form.append('audio', audioFile);
-      setTranscribeStep('文字起こし中（1〜2分かかります）...');
-      res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
+      if (audioFile.size > 4 * 1024 * 1024) {
+        // 4MB超: Supabase SDK経由でアップロード（CORS問題を回避）
+        setTranscribeStep(`アップロード中... (${(audioFile.size / 1024 / 1024).toFixed(1)}MB)`);
+        const supabase = createClient();
+        const safeName = audioFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('audio-temp')
+          .upload(storagePath, audioFile, { contentType: audioFile.type || 'audio/mp4' });
+        if (uploadError) throw new Error(`アップロード失敗: ${uploadError.message}`);
+
+        setTranscribeStep('文字起こし中（1〜2分かかります）...');
+        res = await fetch('/api/admin/karte/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePath, mimeType: audioFile.type }),
+        });
+      } else {
+        // 4MB以下: FormDataで直接送信
+        setTranscribeStep('文字起こし中...');
+        const form = new FormData();
+        form.append('audio', audioFile);
+        res = await fetch('/api/admin/karte/transcribe', { method: 'POST', body: form });
+      }
 
       const data = await res.json();
       if (data.success) {

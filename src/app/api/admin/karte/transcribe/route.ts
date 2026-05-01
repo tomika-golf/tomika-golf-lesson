@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const maxDuration = 300;
 
@@ -14,28 +15,38 @@ export async function POST(request: Request) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const contentType = request.headers.get('content-type') || '';
 
-    // FormDataでファイルを受け取り、サイズに応じて処理
-    const formData = await request.formData();
-    const audioFile = formData.get('audio') as File | null;
-    if (!audioFile) return NextResponse.json({ error: '音声ファイルが必要です' }, { status: 400 });
+    if (contentType.includes('application/json')) {
+      // 大きいファイル: Supabase Storage（SDK経由アップロード済み）→ Gemini File API
+      const { storagePath, mimeType } = await request.json();
+      const supabase = createAdminClient();
 
-    const bytes = await audioFile.arrayBuffer();
-    const mimeType = audioFile.type || 'audio/mp4';
+      const { data: blob, error } = await supabase.storage.from('audio-temp').download(storagePath);
+      if (error || !blob) throw new Error('ダウンロード失敗: ' + error?.message);
 
-    if (bytes.byteLength > 4 * 1024 * 1024) {
-      // 4MB超: Gemini File APIを使用
-      const fileUri = await uploadToGeminiFileApi(apiKey, bytes, mimeType);
+      const bytes = await blob.arrayBuffer();
+      const fileUri = await uploadToGeminiFileApi(apiKey, bytes, mimeType || 'audio/mp4');
+
       const result = await model.generateContent([
-        { fileData: { mimeType, fileUri } },
+        { fileData: { mimeType: mimeType || 'audio/mp4', fileUri } },
         { text: PROMPT },
       ]);
       const text = result.response.text().trim();
+
+      supabase.storage.from('audio-temp').remove([storagePath]).catch(console.error);
       deleteGeminiFile(apiKey, fileUri).catch(console.error);
+
       if (!text) return NextResponse.json({ error: '文字起こし結果が空でした' }, { status: 500 });
       return NextResponse.json({ success: true, text });
     } else {
-      // 4MB以下: inlineData方式
+      // 小さいファイル（4MB以下）: FormData → inlineData方式
+      const formData = await request.formData();
+      const audioFile = formData.get('audio') as File | null;
+      if (!audioFile) return NextResponse.json({ error: '音声ファイルが必要です' }, { status: 400 });
+
+      const bytes = await audioFile.arrayBuffer();
       const base64 = Buffer.from(bytes).toString('base64');
+      const mimeType = audioFile.type || 'audio/mp4';
+
       const result = await model.generateContent([
         { inlineData: { mimeType, data: base64 } },
         { text: PROMPT },
