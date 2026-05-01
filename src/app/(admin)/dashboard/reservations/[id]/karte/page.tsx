@@ -167,18 +167,17 @@ export default function KarteInputPage() {
         catch { throw new Error(`[v4-URLが無効] ${String(urlData.signedUrl).substring(0, 80)}`); }
 
         setTranscribeStep('Supabaseへ送信中...');
-        const audioBytes = await audioFile.arrayBuffer();
-        // LINE WebViewのfetch制限を回避するためXHRを使用
+        // arrayBuffer()変換を省略しFileオブジェクトを直接XHRに渡す
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('PUT', urlData.signedUrl);
           xhr.setRequestHeader('Content-Type', audioFile.type || 'audio/mp4');
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`[v4-2/3] アップロード失敗: HTTP ${xhr.status} ${xhr.responseText.substring(0, 100)}`));
+            else reject(new Error(`[v5-HTTP${xhr.status}] ${xhr.responseText.substring(0, 100)}`));
           };
-          xhr.onerror = () => reject(new Error('[v4-2/3] ネットワークエラー'));
-          xhr.send(audioBytes);
+          xhr.onerror = () => reject(new Error('[v5-XHR失敗]'));
+          xhr.send(audioFile);
         });
 
         setTranscribeStep('文字起こし中（1〜2分かかります）...');
@@ -203,7 +202,7 @@ export default function KarteInputPage() {
         alert('文字起こしエラー: ' + data.error);
       }
     } catch (err) {
-      alert('[v4] エラー: ' + (err instanceof Error ? err.message : String(err)));
+      alert('[v5] エラー: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsTranscribing(false);
       setTranscribeStep('');
