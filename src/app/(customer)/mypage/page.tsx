@@ -217,7 +217,7 @@ export default function MyPage() {
                         {r.lesson_type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}
                       </span>
                       <p className="font-bold text-gray-800 text-lg">
-                        {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
+                        {new Date(r.start_time).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
                       </p>
                     </div>
                     {isPastDeadline ? (

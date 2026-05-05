@@ -190,7 +190,7 @@ export default function AdminDashboard() {
   const openLineModal = (r: AdminReservation) => {
     const d = new Date(r.start_time);
     const dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-    const timeStr = `${d.getHours()}:00`;
+    const timeStr = d.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
     setLineTarget({ reservationId: r.id, customerName: r.profiles?.name || 'お客様', startTime: `${dateStr} ${timeStr}` });
     setLineMessage('');
   };
@@ -327,8 +327,8 @@ export default function AdminDashboard() {
               {lateRequests.map(req => {
                 const d = new Date(req.start_time);
                 const dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
-                const timeStr = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-                const lessonLabel = req.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+                const timeStr = d.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
+                const lessonLabel = req.lesson_type === 'man-to-man' ? '50分' : '25分';
                 return (
                   <div key={req.id} className="bg-purple-50 p-5 rounded-xl shadow-sm border-l-4 border-purple-400">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -388,10 +388,10 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
                           </span>
                           <span className="text-gray-600 text-sm font-bold">
-                            {new Date(r.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} {new Date(r.start_time).getHours()}:00
+                            {new Date(r.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </div>
                         <h3 className="font-black text-xl text-gray-800 mt-1">{r.profiles?.name || '名称未設定'} 様</h3>
@@ -459,7 +459,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
                           </span>
                           <span className="text-gray-600 text-sm font-bold">
                             {new Date(r.start_time).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -549,10 +549,10 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? 'マンツーマン' : 'グループ'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
                           </span>
                           <span className="text-gray-500 text-sm font-bold">
-                            {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
+                            {new Date(r.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </div>
                         <h3 className="font-black text-xl text-gray-800 mt-2">

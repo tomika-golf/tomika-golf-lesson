@@ -41,6 +41,7 @@ export function sliceBlockIntoSlots(
 
   // 50-min slots (man-to-man): on the hour only
   for (let cur = new Date(hourStart); isBefore(cur, blockEnd); cur = addMinutes(cur, 60)) {
+    if (isBefore(cur, blockStart)) continue;
     const end = addMinutes(cur, 50);
     if (isBefore(blockEnd, end)) continue;
 
@@ -59,6 +60,7 @@ export function sliceBlockIntoSlots(
 
   // 25-min slots (group): on the hour and half-hour
   for (let cur = new Date(hourStart); isBefore(cur, blockEnd); cur = addMinutes(cur, 30)) {
+    if (isBefore(cur, blockStart)) continue;
     const end = addMinutes(cur, 25);
     if (isBefore(blockEnd, end)) continue;
 
