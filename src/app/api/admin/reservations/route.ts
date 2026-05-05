@@ -1,6 +1,35 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUsernameFromCookie } from '@/lib/admin-token';
+import { google } from 'googleapis';
+
+async function deleteFromGoogleCalendar(startTime: string, expectedSummary: string) {
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!calendarId || !clientEmail || !privateKey) return;
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: { client_email: clientEmail, private_key: privateKey },
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const start = new Date(startTime);
+  const end = new Date(start.getTime() + 60 * 1000);
+
+  const { data } = await calendar.events.list({
+    calendarId,
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+    singleEvents: true,
+  });
+
+  const targets = (data.items ?? []).filter(e => e.summary === expectedSummary);
+  await Promise.all(
+    targets.map(e => calendar.events.delete({ calendarId, eventId: e.id! }))
+  );
+}
 
 function startOfDayJST(): Date {
   const now = new Date();
@@ -68,10 +97,10 @@ export async function PATCH(request: Request) {
     const { reservationId, status } = await request.json();
     const adminUsername = getAdminUsernameFromCookie(request.headers.get('cookie'));
 
-    // 変更前のステータスを取得
+    // 変更前の予約情報を取得
     const { data: current } = await supabaseAdmin
       .from('reservations')
-      .select('status')
+      .select('status, start_time, lesson_type, user_id')
       .eq('id', reservationId)
       .single();
 
@@ -99,6 +128,21 @@ export async function PATCH(request: Request) {
       target_id: reservationId,
       detail: `${current?.status ?? '?'} → ${status}`,
     });
+
+    // キャンセル時はGoogleカレンダーの予定を削除
+    if (status === 'cancelled' && current?.start_time && current?.user_id) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('name')
+        .eq('id', current.user_id)
+        .single();
+      const customerName = profile?.name ?? 'お客様';
+      const lessonLabel = current.lesson_type === 'man-to-man' ? '50分' : '25分';
+      const expectedSummary = `${customerName}様レッスン（${lessonLabel}）`;
+      deleteFromGoogleCalendar(current.start_time, expectedSummary).catch(err =>
+        console.error('[管理者キャンセル Googleカレンダー削除] エラー:', err)
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

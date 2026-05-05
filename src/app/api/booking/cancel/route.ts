@@ -3,14 +3,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { differenceInHours } from 'date-fns';
 import { google } from 'googleapis';
 
-async function deleteFromGoogleCalendar(startTime: string) {
+async function deleteFromGoogleCalendar(startTime: string, expectedSummary: string) {
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!calendarId || !serviceAccountJson) return;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!calendarId || !clientEmail || !privateKey) return;
 
-  const credentials = JSON.parse(serviceAccountJson);
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: { client_email: clientEmail, private_key: privateKey },
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
   const calendar = google.calendar({ version: 'v3', auth });
@@ -25,8 +25,10 @@ async function deleteFromGoogleCalendar(startTime: string) {
     singleEvents: true,
   });
 
+  // タイトルが一致するイベントだけ削除（予約枠など他の予定を巻き込まない）
+  const targets = (data.items ?? []).filter(e => e.summary === expectedSummary);
   await Promise.all(
-    (data.items ?? []).map(e => calendar.events.delete({ calendarId, eventId: e.id! }))
+    targets.map(e => calendar.events.delete({ calendarId, eventId: e.id! }))
   );
 }
 
@@ -103,14 +105,16 @@ export async function POST(request: Request) {
     const lessonDate = new Date(reservation.start_time);
     const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
     const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
-    const lessonLabel = reservation.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+    const lessonLabelLine = reservation.lesson_type === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
     const reasonText = cancelReason ? `\n📝 理由：${cancelReason}` : '';
-    notifyAdmins(admin, `❌ 予約がキャンセルされました\n\n👤 ${customerName} 様\n🗓️ ${dateStr} ${timeStr}\n🏌️ ${lessonLabel}${reasonText}`).catch(err =>
+    notifyAdmins(admin, `❌ 予約がキャンセルされました\n\n👤 ${customerName} 様\n🗓️ ${dateStr} ${timeStr}\n🏌️ ${lessonLabelLine}${reasonText}`).catch(err =>
       console.error('[キャンセル管理者通知] エラー:', err)
     );
 
     // Googleカレンダーから予定を削除（失敗しても成功とする）
-    deleteFromGoogleCalendar(reservation.start_time).catch(err =>
+    const lessonLabel = reservation.lesson_type === 'man-to-man' ? '50分' : '25分';
+    const expectedSummary = `${customerName}様レッスン（${lessonLabel}）`;
+    deleteFromGoogleCalendar(reservation.start_time, expectedSummary).catch(err =>
       console.error('[Googleカレンダー削除] エラー:', err)
     );
 

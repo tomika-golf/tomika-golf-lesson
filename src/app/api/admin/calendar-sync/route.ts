@@ -4,14 +4,14 @@ import { google } from 'googleapis';
 
 export async function POST(request: Request) {
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!calendarId || !serviceAccountJson) {
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!calendarId || !clientEmail || !privateKey) {
     return NextResponse.json({ error: 'Google Calendar環境変数が未設定です' }, { status: 500 });
   }
 
-  const credentials = JSON.parse(serviceAccountJson);
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: { client_email: clientEmail, private_key: privateKey },
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
   const calendar = google.calendar({ version: 'v3', auth });
@@ -63,14 +63,14 @@ export async function POST(request: Request) {
 // キャンセル済み予約のカレンダーイベントを一括削除
 export async function DELETE() {
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!calendarId || !serviceAccountJson) {
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!calendarId || !clientEmail || !privateKey) {
     return NextResponse.json({ error: 'Google Calendar環境変数が未設定です' }, { status: 500 });
   }
 
-  const credentials = JSON.parse(serviceAccountJson);
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: { client_email: clientEmail, private_key: privateKey },
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
   const calendar = google.calendar({ version: 'v3', auth });

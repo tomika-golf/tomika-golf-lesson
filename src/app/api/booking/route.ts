@@ -72,12 +72,12 @@ async function addToGoogleCalendar(
   lessonType: string
 ) {
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!calendarId || !serviceAccountJson) return;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!calendarId || !clientEmail || !privateKey) return;
 
-  const credentials = JSON.parse(serviceAccountJson);
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: { client_email: clientEmail, private_key: privateKey },
     scopes: ['https://www.googleapis.com/auth/calendar'],
   });
 
