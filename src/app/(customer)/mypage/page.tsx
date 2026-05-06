@@ -28,7 +28,6 @@ export default function MyPage() {
   const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [emergencyTarget, setEmergencyTarget] = useState<Reservation | null>(null);
-  const [emergencyLoading, setEmergencyLoading] = useState(false);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -101,30 +100,6 @@ export default function MyPage() {
   if (loading) return <div className="p-8 text-center text-gray-500">読み込み中...</div>;
   if (!profile) return <div className="p-8 text-center text-red-500">情報の取得に失敗しました。</div>;
 
-  const executeEmergencyCancel = async (reservation: Reservation) => {
-    setEmergencyLoading(true);
-    try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-      const res = await fetch("/api/booking/emergency-cancel", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ reservationId: reservation.id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast("コーチに連絡しました。確認をお待ちください。");
-      } else {
-        showToast(data.error || "送信に失敗しました。", false);
-      }
-    } catch {
-      showToast("通信エラーが発生しました。", false);
-    } finally {
-      setEmergencyLoading(false);
-      setEmergencyTarget(null);
-    }
-  };
-
   const now = new Date();
   const upcomingReservations = reservations.filter((r) => r.status === "confirmed");
   const completedCount = reservations.filter((r) => r.status === "completed").length;
@@ -166,19 +141,24 @@ export default function MyPage() {
         </div>
       )}
 
-      {/* #5: 直前キャンセル申請確認ダイアログ */}
+      {/* 3時間以内：直接LINE連絡案内ダイアログ */}
       {emergencyTarget && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
-            <p className="font-bold text-gray-800 mb-1 text-center">コーチに連絡しますか？</p>
-            <p className="text-xs text-gray-500 mb-2 text-center">キャンセル期限を過ぎているため、コーチへLINEで連絡します。</p>
-            <p className="text-xs text-orange-600 bg-orange-50 rounded-lg p-2 mb-5 text-center">実際のキャンセル処理はコーチが行います。</p>
-            <div className="flex gap-3">
-              <button onClick={() => setEmergencyTarget(null)} className="flex-1 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-600">戻る</button>
-              <button onClick={() => executeEmergencyCancel(emergencyTarget)} disabled={emergencyLoading} className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-bold disabled:opacity-50">
-                {emergencyLoading ? "送信中..." : "連絡する"}
-              </button>
-            </div>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl space-y-4">
+            <p className="text-3xl text-center">📱</p>
+            <p className="font-bold text-gray-800 text-center">LINEで直接ご連絡ください</p>
+            <p className="text-sm text-gray-600 text-center leading-relaxed">
+              レッスン開始3時間前を過ぎているため、システムからのキャンセルはできません。
+            </p>
+            <p className="text-sm text-orange-700 bg-orange-50 rounded-xl p-3 text-center font-bold leading-relaxed">
+              LINEのトーク画面からコーチに直接メッセージをお送りください。
+            </p>
+            <button
+              onClick={() => setEmergencyTarget(null)}
+              className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold"
+            >
+              閉じる
+            </button>
           </div>
         </div>
       )}
@@ -254,7 +234,7 @@ export default function MyPage() {
                 <div key={r.id} className="bg-gray-50 p-4 rounded-xl border flex justify-between items-center opacity-80">
                   <div>
                     <p className="font-bold text-gray-600 text-sm">
-                      {new Date(r.start_time).toLocaleDateString()} {new Date(r.start_time).getHours()}:00
+                      {new Date(r.start_time).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
                     </p>
                     <p className="text-xs font-bold mt-1 text-gray-500">
                       {r.status === "completed" ? "✅ 受講完了" : "❌ キャンセル"}
