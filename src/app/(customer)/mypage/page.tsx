@@ -200,21 +200,12 @@ export default function MyPage() {
                         {new Date(r.start_time).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
                       </p>
                     </div>
-                    {isPastDeadline ? (
-                      <button
-                        onClick={() => setEmergencyTarget(r)}
-                        className="text-xs border-2 border-orange-300 text-orange-500 font-bold px-3 py-2 rounded-lg hover:bg-orange-50"
-                      >
-                        コーチに連絡
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setCancelTarget(r)}
-                        className="text-sm border-2 border-gray-300 text-gray-500 font-bold px-3 py-2 rounded-lg hover:bg-gray-50"
-                      >
-                        キャンセル
-                      </button>
-                    )}
+                    <button
+                      onClick={() => isPastDeadline ? setEmergencyTarget(r) : setCancelTarget(r)}
+                      className="text-sm border-2 border-gray-300 text-gray-500 font-bold px-3 py-2 rounded-lg hover:bg-gray-50"
+                    >
+                      キャンセル
+                    </button>
                   </div>
                 );
               })}
