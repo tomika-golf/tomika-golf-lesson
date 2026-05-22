@@ -230,8 +230,8 @@ export default function KarteInputPage() {
   };
 
   const handleSave = async (isDraft: boolean) => {
-    if (!aiResult) {
-      alert("AIで要約してから保存してください。");
+    if (!aiResult.trim()) {
+      alert("カルテ文を入力してから保存してください。");
       return;
     }
     setIsSaving(true);
@@ -385,22 +385,18 @@ export default function KarteInputPage() {
         {/* 右列：AI結果・動画・保存 */}
         <section className="space-y-5">
 
-          {/* AI結果 */}
+          {/* カルテ文 */}
           <div className="bg-white rounded-xl border shadow-sm p-5 flex flex-col">
-            <h2 className="font-bold text-gray-700 mb-3">📨 AIが作成したカルテ文</h2>
-            <div className="flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 min-h-[200px]">
-              {aiResult ? (
-                <textarea
-                  value={aiResult}
-                  onChange={e => setAiResult(e.target.value)}
-                  className="w-full h-full min-h-[200px] p-3 bg-transparent text-sm text-gray-800 leading-relaxed resize-none focus:outline-none"
-                />
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-400 text-sm text-center p-4">
-                  左側に入力して「AIで要約する」を<br />押すと文章が生成されます。
-                </div>
-              )}
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-bold text-gray-700">📨 カルテ文</h2>
+              <span className="text-xs text-gray-400">AI要約 or 直接入力・貼り付けOK</span>
             </div>
+            <textarea
+              value={aiResult}
+              onChange={e => setAiResult(e.target.value)}
+              className="w-full min-h-[200px] p-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-800 leading-relaxed resize-none focus:outline-none focus:border-gray-400 focus:bg-white transition"
+              placeholder={"AIで要約すると自動で入力されます。\n他のAIで作成した文章を直接貼り付けることもできます。"}
+            />
           </div>
 
           {/* 動画添付 */}
