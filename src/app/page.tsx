@@ -25,9 +25,6 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 px-6 pb-16 text-white max-w-2xl mx-auto w-full">
-          <div className="inline-block bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-4 shadow">
-            🎉 5月限定キャンペーン実施中
-          </div>
           <p className="text-sm font-bold tracking-widest text-green-300 mb-3 uppercase">Tomika Golf Lesson</p>
           <h1 className="text-3xl sm:text-4xl font-extrabold leading-snug mb-4 drop-shadow-lg">
             毎週の練習、そろそろ<br />「結果」に変えませんか？
@@ -129,34 +126,24 @@ export default function Home() {
         <div className="max-w-2xl mx-auto">
           <p className="text-center text-green-700 text-sm font-bold tracking-widest mb-2">PRICE</p>
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-2">料金プラン</h2>
-          <p className="text-center text-xs text-gray-500 mb-8">表示価格はすべて税込・ボール代込みです</p>
-
-          {/* 5月限定バナー */}
-          <div className="bg-red-50 border-2 border-red-400 rounded-2xl p-5 mb-6 text-center">
-            <span className="bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full">🎉 5月限定キャンペーン価格</span>
-            <p className="text-gray-700 text-sm mt-3 leading-relaxed">
-              5月中は特別価格でレッスンをご体験いただけます。<br />
-              <span className="text-red-500 font-bold">6月より正規料金に変更予定ですので、お早めにどうぞ！</span>
-            </p>
-          </div>
+          <p className="text-center text-xs text-gray-500 mb-8">表示価格はすべて税込みです</p>
 
           {/* 料金カード */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
               <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
               <p className="text-2xl font-extrabold text-gray-900 mb-1">50分</p>
-              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥3,000</p>
-              <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
+              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥4,000</p>
+              <p className="text-xs text-gray-400 mt-2">税込み</p>
             </div>
             <div className="bg-white rounded-2xl border-2 border-green-600 p-5 text-center shadow-sm">
               <p className="text-xs font-bold text-green-700 mb-2">マンツーマン</p>
               <p className="text-2xl font-extrabold text-gray-900 mb-1">25分</p>
-              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥1,500</p>
-              <p className="text-xs text-gray-400 mt-2">税込・ボール代込み</p>
+              <p className="text-3xl font-black text-green-700 leading-none whitespace-nowrap">¥2,500</p>
+              <p className="text-xs text-gray-400 mt-2">税込み</p>
             </div>
           </div>
 
-          <p className="text-center text-xs text-gray-400">※6月以降の正規料金は別途ご案内いたします</p>
         </div>
       </section>
 
@@ -267,9 +254,6 @@ export default function Home() {
       {/* ========== ⑧ CTA（最後の誘導） ========== */}
       <section className="bg-green-700 py-16 px-6 text-white text-center">
         <div className="max-w-2xl mx-auto">
-          <div className="inline-block bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4 shadow">
-            🎉 5月限定キャンペーン実施中
-          </div>
           <h2 className="text-2xl font-extrabold mb-3">まずは1回、体験してみませんか？</h2>
           <p className="text-green-200 text-sm mb-2">ご予約の流れはとても簡単！</p>
           <ol className="text-sm text-white/90 text-left inline-block space-y-2 mb-8 mt-2">
