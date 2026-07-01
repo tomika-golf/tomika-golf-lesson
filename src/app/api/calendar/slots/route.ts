@@ -28,6 +28,22 @@ export async function GET(request: Request) {
 
     const adminClient = createAdminClient();
 
+    // 認証トークンから 富加町ゴルフ部 ラベル保持者か確認
+    let include15min = false;
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (token) {
+      const { data: { user } } = await adminClient.auth.getUser(token);
+      if (user) {
+        const { data: profile } = await adminClient
+          .from('profiles')
+          .select('labels')
+          .eq('id', user.id)
+          .single();
+        include15min = Array.isArray(profile?.labels) && profile.labels.includes('富加町ゴルフ部');
+      }
+    }
+
     // カレンダーイベント・既存予約・休業日を並行取得
     const [calendarResponse, reservationsResult, blockedResult] = await Promise.all([
       calendar.events.list({
@@ -64,7 +80,7 @@ export async function GET(request: Request) {
       const end = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
       if (start && end) {
-        return sliceBlockIntoSlots(start, end, now, isAdmin ? 0 : 3, existingReservations);
+        return sliceBlockIntoSlots(start, end, now, isAdmin ? 0 : 3, existingReservations, include15min);
       }
       return [];
     });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 // 管理者が編集できるフィールドを明示的に限定する（意図しないフィールドの書き換えを防ぐ）
-const ALLOWED_PATCH_FIELDS = ['name', 'name_kana', 'phone', 'admin_memo'] as const;
+const ALLOWED_PATCH_FIELDS = ['name', 'name_kana', 'phone', 'admin_memo', 'labels'] as const;
 type AllowedField = typeof ALLOWED_PATCH_FIELDS[number];
 
 export async function PATCH(

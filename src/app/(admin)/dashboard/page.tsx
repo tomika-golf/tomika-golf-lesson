@@ -9,7 +9,7 @@ type AdminReservation = {
   user_id: string;
   start_time: string;
   end_time: string;
-  lesson_type: "man-to-man" | "group";
+  lesson_type: "man-to-man" | "group" | "short";
   status: "confirmed" | "completed" | "cancelled";
   options: string[];
   customer_memo: string;
@@ -20,7 +20,7 @@ type AdminReservation = {
 type PendingKarte = {
   id: string;
   start_time: string;
-  lesson_type: "man-to-man" | "group";
+  lesson_type: "man-to-man" | "group" | "short";
   has_draft: boolean;
   profiles: { name: string };
 };
@@ -35,7 +35,7 @@ type LateRequest = {
   id: string;
   user_id: string;
   start_time: string;
-  lesson_type: 'man-to-man' | 'group';
+  lesson_type: 'man-to-man' | 'group' | 'short';
   profiles: { name: string };
 };
 
@@ -308,6 +308,7 @@ export default function AdminDashboard() {
           <Link href="/dashboard/blocked-dates" className="bg-gray-600 px-3 py-2 rounded">🚫 休業日</Link>
           <Link href="/dashboard/line-broadcast" className="bg-green-700 px-3 py-2 rounded shadow">📢 LINE一斉送信</Link>
           <Link href="/dashboard/ai-settings" className="bg-purple-700 px-3 py-2 rounded">🤖 AIプロンプト</Link>
+          <Link href="/dashboard/coupon-codes" className="bg-yellow-700 px-3 py-2 rounded">🏷️ クーポン管理</Link>
           <button onClick={handleLogout} className="bg-red-700 px-3 py-2 rounded">ログアウト</button>
         </div>
       </header>
@@ -328,7 +329,7 @@ export default function AdminDashboard() {
                 const d = new Date(req.start_time);
                 const dateStr = d.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' });
                 const timeStr = d.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
-                const lessonLabel = req.lesson_type === 'man-to-man' ? '50分' : '25分';
+                const lessonLabel = req.lesson_type === 'man-to-man' ? '50分' : req.lesson_type === 'short' ? '15分' : '25分';
                 return (
                   <div key={req.id} className="bg-purple-50 p-5 rounded-xl shadow-sm border-l-4 border-purple-400">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -388,7 +389,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : r.lesson_type === 'short' ? '15分' : '25分'}
                           </span>
                           <span className="text-gray-600 text-sm font-bold">
                             {new Date(r.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -459,7 +460,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : r.lesson_type === 'short' ? '15分' : '25分'}
                           </span>
                           <span className="text-gray-600 text-sm font-bold">
                             {new Date(r.start_time).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -496,7 +497,7 @@ export default function AdminDashboard() {
                     <p className="font-bold text-gray-800">{(p.profiles as any)?.name || '名称未設定'} 様</p>
                     <p className="text-sm text-gray-500">
                       {new Date(p.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
-                      {' '}({p.lesson_type === 'man-to-man' ? '50分' : '25分'})
+                      {' '}({p.lesson_type === 'man-to-man' ? '50分' : p.lesson_type === 'short' ? '15分' : '25分'})
                     </p>
                     {p.has_draft && <span className="text-xs text-orange-500 font-bold">📝 下書きあり</span>}
                   </div>
@@ -549,7 +550,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${r.lesson_type === 'man-to-man' ? 'bg-green-100 text-brand' : 'bg-orange-100 text-accent'}`}>
-                            {r.lesson_type === 'man-to-man' ? '50分' : '25分'}
+                            {r.lesson_type === 'man-to-man' ? '50分' : r.lesson_type === 'short' ? '15分' : '25分'}
                           </span>
                           <span className="text-gray-500 text-sm font-bold">
                             {new Date(r.start_time).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}

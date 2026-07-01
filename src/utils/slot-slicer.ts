@@ -5,7 +5,7 @@ export interface TimeSlot {
   endTime: Date;
   isAvailable: boolean;
   isBlockedByTimeToStart: boolean;
-  lessonType: 'man-to-man' | 'group';
+  lessonType: 'man-to-man' | 'group' | 'short';
 }
 
 export interface ExistingReservation {
@@ -21,6 +21,7 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
  * カレンダーの1つの稼働ブロックを受け取り、
  * 50分枠（毎時00分スタート、man-to-man）と
  * 25分枠（毎時00分・30分スタート、group）の両方を生成する。
+ * include15min が true の場合、15分枠（毎15分スタート、short）も生成する。
  * 既存予約と重複するスロットは isAvailable: false になる。
  */
 export function sliceBlockIntoSlots(
@@ -28,7 +29,8 @@ export function sliceBlockIntoSlots(
   blockEnd: Date,
   now: Date = new Date(),
   blockHours: number = 3,
-  existingReservations: ExistingReservation[] = []
+  existingReservations: ExistingReservation[] = [],
+  include15min: boolean = false
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
 
@@ -75,6 +77,27 @@ export function sliceBlockIntoSlots(
       isBlockedByTimeToStart,
       lessonType: 'group',
     });
+  }
+
+  // 15-min slots (short): every 15 minutes — 富加町ゴルフ部 限定
+  if (include15min) {
+    for (let cur = new Date(hourStart); isBefore(cur, blockEnd); cur = addMinutes(cur, 15)) {
+      if (isBefore(cur, blockStart)) continue;
+      const end = addMinutes(cur, 15);
+      if (isBefore(blockEnd, end)) continue;
+
+      const diffMinutes = differenceInMinutes(cur, now);
+      const isBlockedByTimeToStart = diffMinutes < blockHours * 60;
+      const isAvailable = !reservations.some(r => overlaps(cur, end, r.start, r.end));
+
+      slots.push({
+        startTime: new Date(cur),
+        endTime: end,
+        isAvailable,
+        isBlockedByTimeToStart,
+        lessonType: 'short',
+      });
+    }
   }
 
   return slots;

@@ -24,7 +24,7 @@ async function sendBookingConfirmation(
   const lessonDate = new Date(startTime);
   const dateStr = lessonDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
   const timeStr = lessonDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
-  const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+  const lessonLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : lessonType === 'short' ? 'マンツーマン（15分）' : 'マンツーマン（25分）';
 
   const message = `✅ ご予約が確定しました！\n\n📅 ${dateStr} ${timeStr}\n🏌️ ${lessonLabel}\n\n当日お気をつけてお越しください。\n前日・当日の朝8時にもリマインダーをお送りします。\n\nキャンセルは3時間前まで\nメニューの「レッスンはこちら」から行えます。\n\n富加ゴルフ`;
 
@@ -82,7 +82,7 @@ async function addToGoogleCalendar(
   });
 
   const calendar = google.calendar({ version: 'v3', auth });
-  const lessonLabel = lessonType === 'man-to-man' ? '50分' : '25分';
+  const lessonLabel = lessonType === 'man-to-man' ? '50分' : lessonType === 'short' ? '15分' : '25分';
 
   await calendar.events.insert({
     calendarId,
@@ -170,13 +170,21 @@ export async function POST(request: Request) {
     const userId = user.id;
 
     const [profileResult, reservationsResult] = await Promise.all([
-      admin.from('profiles').select('id, name').eq('id', userId).single(),
+      admin.from('profiles').select('id, name, labels').eq('id', userId).single(),
       admin.from('reservations').select('status, lesson_type').eq('user_id', userId),
     ]);
 
     // 名前未登録の場合は予約不可
     if (!profileResult.data || !profileResult.data.name || profileResult.data.name.trim() === '') {
       return NextResponse.json({ success: false, error: 'お名前の登録が必要です。マイページから登録してください。' }, { status: 400 });
+    }
+
+    // 15分枠は富加町ゴルフ部ラベル保持者のみ
+    if (lessonType === 'short') {
+      const labels: string[] = Array.isArray(profileResult.data?.labels) ? profileResult.data.labels : [];
+      if (!labels.includes('富加町ゴルフ部')) {
+        return NextResponse.json({ success: false, error: '15分枠は特別会員限定です' }, { status: 403 });
+      }
     }
 
     const userReservations = reservationsResult.data || [];
@@ -238,7 +246,7 @@ export async function POST(request: Request) {
     const bookingDate = new Date(startTime);
     const bookingDateStr = bookingDate.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
     const bookingTimeStr = bookingDate.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
-    const bookingLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : 'マンツーマン（25分）';
+    const bookingLabel = lessonType === 'man-to-man' ? 'マンツーマン（50分）' : lessonType === 'short' ? 'マンツーマン（15分）' : 'マンツーマン（25分）';
     notifyAdmins(admin, `📅 新規予約が入りました！\n\n👤 ${customerName} 様\n🗓️ ${bookingDateStr} ${bookingTimeStr}\n🏌️ ${bookingLabel}`).catch(err =>
       console.error('[管理者通知] エラー:', err)
     );

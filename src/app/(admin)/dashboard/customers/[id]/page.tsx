@@ -17,11 +17,13 @@ type Reservation = {
   user_id: string;
   start_time: string;
   end_time: string;
-  lesson_type: "man-to-man" | "group";
+  lesson_type: "man-to-man" | "group" | "short";
   status: "confirmed" | "completed" | "cancelled";
   customer_memo: string | null;
   review_notes: ReviewNote[] | null;
 };
+
+const GOLF_CLUB_LABEL = '富加町ゴルフ部';
 
 type Profile = {
   id: string;
@@ -29,10 +31,13 @@ type Profile = {
   name_kana: string | null;
   phone: string | null;
   admin_memo: string | null;
+  labels: string[] | null;
 };
 
-function lessonLabel(type: "man-to-man" | "group") {
-  return type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）";
+function lessonLabel(type: string) {
+  if (type === "man-to-man") return "マンツーマン（50分）";
+  if (type === "short") return "マンツーマン（15分）";
+  return "マンツーマン（25分）";
 }
 
 function getAdminRole(): string {
@@ -56,6 +61,7 @@ export default function CustomerDetailPage() {
   const [lineMessage, setLineMessage] = useState('');
   const [lineSending, setLineSending] = useState(false);
   const [showLineForm, setShowLineForm] = useState(false);
+  const [labelLoading, setLabelLoading] = useState(false);
 
   const fetchData = () => {
     fetch(`/api/admin/customers/${customerId}`)
@@ -94,6 +100,32 @@ export default function CustomerDetailPage() {
       alert("通信エラーが発生しました。");
     } finally {
       setNameLoading(false);
+    }
+  };
+
+  const handleLabelToggle = async (add: boolean) => {
+    if (!profile) return;
+    const current: string[] = Array.isArray(profile.labels) ? profile.labels : [];
+    const updated = add
+      ? [...current, GOLF_CLUB_LABEL]
+      : current.filter(l => l !== GOLF_CLUB_LABEL);
+    setLabelLoading(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labels: updated }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+      } else {
+        alert("エラー: " + data.error);
+      }
+    } catch {
+      alert("通信エラーが発生しました。");
+    } finally {
+      setLabelLoading(false);
     }
   };
 
@@ -254,6 +286,35 @@ export default function CustomerDetailPage() {
             <p className="text-sm text-orange-700 bg-orange-50 border border-orange-100 rounded-lg p-3">
               📌 管理メモ: {profile.admin_memo}
             </p>
+          )}
+
+          {/* ラベル管理 */}
+          {adminRole !== 'staff' && (
+            <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-bold text-gray-500">🏷️ ラベル管理</p>
+              {Array.isArray(profile.labels) && profile.labels.includes(GOLF_CLUB_LABEL) ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
+                    {GOLF_CLUB_LABEL}
+                  </span>
+                  <button
+                    onClick={() => handleLabelToggle(false)}
+                    disabled={labelLoading}
+                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                  >
+                    {labelLoading ? "処理中..." : "削除"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleLabelToggle(true)}
+                  disabled={labelLoading}
+                  className="w-full text-sm text-green-700 border border-green-300 hover:bg-green-50 font-bold py-2 rounded-lg transition disabled:opacity-50"
+                >
+                  {labelLoading ? "処理中..." : `＋ ${GOLF_CLUB_LABEL} を付与`}
+                </button>
+              )}
+            </div>
           )}
 
           {/* LINEで連絡 */}

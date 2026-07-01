@@ -30,7 +30,7 @@ export default function RegisterPage() {
       const data = await res.json();
       if (data.success) {
         // フルリロードして認証状態をリセット（needsRegistrationをクリア）
-        window.location.href = "/mypage";
+        window.location.href = "/coupon";
       } else {
         setError(data.error || "エラーが発生しました");
         setIsSubmitting(false);

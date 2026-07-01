@@ -11,7 +11,7 @@ type TimeSlot = {
   endTime: string;
   isAvailable: boolean;
   isBlockedByTimeToStart: boolean;
-  lessonType: "man-to-man" | "group";
+  lessonType: "man-to-man" | "group" | "short";
 };
 
 export default function BookingPage() {
@@ -22,7 +22,8 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [lessonType, setLessonType] = useState<"man-to-man" | "group">("man-to-man");
+  const [lessonType, setLessonType] = useState<"man-to-man" | "group" | "short">("man-to-man");
+  const [hasGolfClubLabel, setHasGolfClubLabel] = useState(false);
   const [memo, setMemo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestingSlot, setRequestingSlot] = useState<string | null>(null);
@@ -37,7 +38,22 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    fetch("/api/calendar/slots")
+    const headers: HeadersInit = {};
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+    // ユーザープロフィールを取得してラベル確認
+    fetch("/api/user/profile", { headers })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.profile) {
+          const labels: string[] = Array.isArray(data.profile.labels) ? data.profile.labels : [];
+          setHasGolfClubLabel(labels.includes("富加町ゴルフ部"));
+        }
+      })
+      .catch(console.error);
+
+    // スロット取得（認証トークン付き → 15分枠も返ってくる場合あり）
+    fetch("/api/calendar/slots", { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -47,7 +63,7 @@ export default function BookingPage() {
         setLoading(false);
       })
       .catch(console.error);
-  }, [isReady]);
+  }, [isReady, accessToken]);
 
   const filteredSlots = useMemo(() => {
     return allSlots.filter((slot) => slot.lessonType === lessonType && slot.isAvailable);
@@ -142,10 +158,16 @@ export default function BookingPage() {
     }
   };
 
-  const handleLessonTypeChange = (type: "man-to-man" | "group") => {
+  const handleLessonTypeChange = (type: "man-to-man" | "group" | "short") => {
     setLessonType(type);
     setSelectedSlot(null);
   };
+
+  function lessonTypeLabel(type: "man-to-man" | "group" | "short"): string {
+    if (type === "man-to-man") return "マンツーマン（50分）";
+    if (type === "group") return "マンツーマン（25分）";
+    return "マンツーマン（15分）";
+  }
 
   if (!isReady) {
     return (
@@ -217,23 +239,35 @@ export default function BookingPage() {
       <main className="flex-1 p-4 max-w-2xl mx-auto w-full">
         <section className="mb-6">
           <h2 className="text-lg font-bold text-brand mb-3 border-b-2 border-brand pb-1">1. レッスン種別</h2>
-          <div className="flex gap-4">
-            <button
-              onClick={() => handleLessonTypeChange("man-to-man")}
-              className={`flex-1 py-3 rounded-lg font-bold border-2 transition-colors ${
-                lessonType === "man-to-man" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
-              }`}
-            >
-              マンツーマン（50分）
-            </button>
-            <button
-              onClick={() => handleLessonTypeChange("group")}
-              className={`flex-1 py-3 rounded-lg font-bold border-2 transition-colors ${
-                lessonType === "group" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
-              }`}
-            >
-              マンツーマン（25分）
-            </button>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleLessonTypeChange("man-to-man")}
+                className={`flex-1 py-3 rounded-lg font-bold border-2 transition-colors ${
+                  lessonType === "man-to-man" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
+                }`}
+              >
+                マンツーマン（50分）
+              </button>
+              <button
+                onClick={() => handleLessonTypeChange("group")}
+                className={`flex-1 py-3 rounded-lg font-bold border-2 transition-colors ${
+                  lessonType === "group" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
+                }`}
+              >
+                マンツーマン（25分）
+              </button>
+            </div>
+            {hasGolfClubLabel && (
+              <button
+                onClick={() => handleLessonTypeChange("short")}
+                className={`w-full py-3 rounded-lg font-bold border-2 transition-colors ${
+                  lessonType === "short" ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-300"
+                }`}
+              >
+                マンツーマン（15分）
+              </button>
+            )}
           </div>
         </section>
 
@@ -302,7 +336,7 @@ export default function BookingPage() {
               <div className="bg-gray-50 border rounded-xl p-6 text-center">
                 <p className="text-gray-500 text-sm">
                   {format(selectedDate, "M月d日", { locale: ja })}は
-                  {lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}レッスンの枠がありません。
+                  {lessonTypeLabel(lessonType)}レッスンの枠がありません。
                 </p>
               </div>
             ) : (
@@ -380,9 +414,7 @@ export default function BookingPage() {
           <div className="max-w-2xl mx-auto flex gap-4 items-center">
             <div className="flex-1 text-sm font-bold text-gray-700">
               <div>{format(new Date(selectedSlot.startTime), "M/d(E) H:mm", { locale: ja })}</div>
-              <div className="text-brand">
-                {lessonType === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}
-              </div>
+              <div className="text-brand">{lessonTypeLabel(lessonType)}</div>
             </div>
             <button
               onClick={handleBooking}
