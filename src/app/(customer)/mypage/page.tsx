@@ -14,7 +14,7 @@ type Reservation = {
   id: string;
   start_time: string;
   end_time: string;
-  lesson_type: "man-to-man" | "group";
+  lesson_type: "man-to-man" | "group" | "short";
   status: "confirmed" | "completed" | "cancelled";
 };
 
@@ -194,7 +194,7 @@ export default function MyPage() {
                   <div key={r.id} className="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
                     <div>
                       <span className="text-xs font-bold px-2 py-1 rounded inline-block mb-2 bg-green-100 text-brand">
-                        {r.lesson_type === "man-to-man" ? "マンツーマン（50分）" : "マンツーマン（25分）"}
+                        {r.lesson_type === "man-to-man" ? "マンツーマン（50分）" : r.lesson_type === "short" ? "マンツーマン（15分）" : "マンツーマン（25分）"}
                       </span>
                       <p className="font-bold text-gray-800 text-lg">
                         {new Date(r.start_time).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })} {new Date(r.start_time).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })}
