@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { notifyAdmins } from '@/lib/notify-admin';
 import { differenceInHours } from 'date-fns';
 import { google } from 'googleapis';
 
@@ -29,24 +30,6 @@ async function deleteFromGoogleCalendar(startTime: string, expectedSummary: stri
   const targets = (data.items ?? []).filter(e => e.summary === expectedSummary);
   await Promise.all(
     targets.map(e => calendar.events.delete({ calendarId, eventId: e.id! }))
-  );
-}
-
-async function notifyAdmins(admin: ReturnType<typeof createAdminClient>, message: string) {
-  const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!lineToken) return;
-  const adminUserIds = (process.env.ADMIN_USER_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  if (adminUserIds.length === 0) return;
-  const { data: adminProfiles } = await admin.from('profiles').select('line_user_id').in('id', adminUserIds);
-  const lineUserIds = (adminProfiles ?? []).map(p => p.line_user_id).filter(Boolean) as string[];
-  await Promise.all(
-    lineUserIds.map(lineUserId =>
-      fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${lineToken}` },
-        body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: message }] }),
-      })
-    )
   );
 }
 

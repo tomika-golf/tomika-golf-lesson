@@ -1,58 +1,83 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { notifyAdmins } from '@/lib/notify-admin';
 
 export async function GET(request: Request) {
+  const admin = createAdminClient();
+
   const auth = request.headers.get('authorization');
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    // Vercelのcronからの呼び出しが認証で弾かれている場合のみ通知する
+    // (このURLは誰でも叩けるため、無関係な401まで通知すると誤報だらけになる)
+    if (request.headers.get('user-agent')?.includes('vercel-cron')) {
+      notifyAdmins(admin, '⚠️ リマインド送信cronが認証エラーで実行できませんでした。\nCRON_SECRET の設定を確認してください。').catch(err =>
+        console.error('[cronエラー通知] エラー:', err)
+      );
+    }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const admin = createAdminClient();
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
     return NextResponse.json({ error: 'LINE_CHANNEL_ACCESS_TOKEN 未設定' }, { status: 500 });
   }
 
-  const { data: pending } = await admin
-    .from('line_notification_queue')
-    .select('*')
-    .is('sent_at', null)
-    .lte('scheduled_at', new Date().toISOString());
+  try {
+    const { data: pending, error: fetchError } = await admin
+      .from('line_notification_queue')
+      .select('*')
+      .is('sent_at', null)
+      .lte('scheduled_at', new Date().toISOString());
 
-  if (!pending || pending.length === 0) {
-    return NextResponse.json({ sent: 0 });
-  }
+    if (fetchError) throw fetchError;
 
-  let sent = 0;
-  for (const item of pending) {
-    try {
-      const res = await fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          to: item.line_user_id,
-          messages: [{ type: 'text', text: item.message }],
-        }),
-      });
-
-      if (res.ok) {
-        await admin
-          .from('line_notification_queue')
-          .update({ sent_at: new Date().toISOString() })
-          .eq('id', item.id);
-        sent++;
-        console.log('[LINE通知Cron] 送信成功 to:', item.line_user_id);
-      } else {
-        const body = await res.text();
-        console.error('[LINE通知Cron] 送信失敗:', res.status, body);
-      }
-    } catch (err) {
-      console.error('[LINE通知Cron] エラー:', err);
+    if (!pending || pending.length === 0) {
+      return NextResponse.json({ sent: 0 });
     }
-  }
 
-  return NextResponse.json({ sent, total: pending.length });
+    let sent = 0;
+    for (const item of pending) {
+      try {
+        const res = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            to: item.line_user_id,
+            messages: [{ type: 'text', text: item.message }],
+          }),
+        });
+
+        if (res.ok) {
+          await admin
+            .from('line_notification_queue')
+            .update({ sent_at: new Date().toISOString() })
+            .eq('id', item.id);
+          sent++;
+          console.log('[LINE通知Cron] 送信成功 to:', item.line_user_id);
+        } else {
+          const body = await res.text();
+          console.error('[LINE通知Cron] 送信失敗:', res.status, body);
+        }
+      } catch (err) {
+        console.error('[LINE通知Cron] エラー:', err);
+      }
+    }
+
+    if (sent < pending.length) {
+      notifyAdmins(admin, `⚠️ リマインド送信で一部失敗しました。\n${pending.length}件中${sent}件のみ送信成功。`).catch(err =>
+        console.error('[cronエラー通知] エラー:', err)
+      );
+    }
+
+    return NextResponse.json({ sent, total: pending.length });
+  } catch (err) {
+    console.error('[LINE通知Cron] 致命的エラー:', err);
+    notifyAdmins(admin, `🚨 リマインド送信cronでエラーが発生し、処理が中断しました。\nログを確認してください。`).catch(e =>
+      console.error('[cronエラー通知] エラー:', e)
+    );
+    return NextResponse.json({ error: 'internal error' }, { status: 500 });
+  }
 }
