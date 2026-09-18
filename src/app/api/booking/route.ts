@@ -98,7 +98,8 @@ async function addToGoogleCalendar(
 async function queueReminders(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
-  startTime: string
+  startTime: string,
+  reservationId: string
 ) {
   const { data: profile } = await admin
     .from('profiles')
@@ -132,6 +133,7 @@ async function queueReminders(
       line_user_id: profile.line_user_id,
       message: `📅 明日のレッスンのお知らせ\n${lessonStr} ${timeStr}のレッスンが予定されています。\nお気をつけてお越しください！`,
       scheduled_at: prevDayReminder.toISOString(),
+      reservation_id: reservationId,
     });
   }
 
@@ -140,6 +142,7 @@ async function queueReminders(
       line_user_id: profile.line_user_id,
       message: `⛳ 本日のレッスンのお知らせ\n${lessonStr} ${timeStr}のレッスンが本日あります。\nお気をつけてお越しください！`,
       scheduled_at: sameDayReminder.toISOString(),
+      reservation_id: reservationId,
     });
   }
 
@@ -252,7 +255,7 @@ export async function POST(request: Request) {
     );
 
     // リマインダーをキューに登録（失敗しても予約は成功とする）
-    queueReminders(admin, userId, startTime).catch(err =>
+    queueReminders(admin, userId, startTime, data.id).catch(err =>
       console.error('[リマインダー登録] エラー:', err)
     );
 

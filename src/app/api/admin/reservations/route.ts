@@ -129,7 +129,7 @@ export async function PATCH(request: Request) {
       detail: `${current?.status ?? '?'} → ${status}`,
     });
 
-    // キャンセル時はGoogleカレンダーの予定を削除
+    // キャンセル時はGoogleカレンダーの予定を削除し、未送信のリマインダーも削除
     if (status === 'cancelled' && current?.start_time && current?.user_id) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
@@ -142,6 +142,16 @@ export async function PATCH(request: Request) {
       deleteFromGoogleCalendar(current.start_time, expectedSummary).catch(err =>
         console.error('[管理者キャンセル Googleカレンダー削除] エラー:', err)
       );
+
+      try {
+        await supabaseAdmin
+          .from('line_notification_queue')
+          .delete()
+          .eq('reservation_id', reservationId)
+          .is('sent_at', null);
+      } catch (err) {
+        console.error('[管理者キャンセル リマインダー削除] エラー:', err);
+      }
     }
 
     return NextResponse.json({ success: true });

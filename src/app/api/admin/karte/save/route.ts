@@ -100,6 +100,7 @@ async function handleKarteNotification(reservationId: string, isEdit: boolean) {
       line_user_id: profile.line_user_id,
       message,
       scheduled_at: next8amJST().toISOString(),
+      reservation_id: reservationId,
     });
     console.log('[LINE通知] 静寂時間帯のためキューに登録 scheduled_at:', next8amJST().toISOString());
   } else {

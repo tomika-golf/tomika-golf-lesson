@@ -99,6 +99,17 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
+    // 未送信のリマインダーを削除(キャンセル済みレッスンの通知が届かないようにする)
+    try {
+      await admin
+        .from('line_notification_queue')
+        .delete()
+        .eq('reservation_id', reservationId)
+        .is('sent_at', null);
+    } catch (err) {
+      console.error('[リマインダー削除] エラー:', err);
+    }
+
     // 管理者へキャンセル通知（失敗しても成功とする）
     const { data: profile } = await admin.from('profiles').select('name').eq('id', userId).single();
     const customerName = profile?.name ?? 'お客様';
