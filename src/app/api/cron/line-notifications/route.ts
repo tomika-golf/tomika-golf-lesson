@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { notifyAdmins } from '@/lib/notify-admin';
 
+// Healthchecks.io へ生存確認のpingを送る(死活監視。失敗しても本処理には影響させない)
+// レスポンスを返す前に完了させるため await して使う(Vercelは応答後に処理を打ち切ることがあるため)
+async function pingHealthcheck(suffix: '' | '/fail' = '') {
+  const url = process.env.HEALTHCHECKS_PING_URL;
+  if (!url) return;
+  try {
+    await fetch(`${url}${suffix}`);
+  } catch (err) {
+    console.error('[Healthcheck ping] エラー:', err);
+  }
+}
+
 export async function GET(request: Request) {
   const admin = createAdminClient();
 
@@ -32,6 +44,7 @@ export async function GET(request: Request) {
     if (fetchError) throw fetchError;
 
     if (!pending || pending.length === 0) {
+      await pingHealthcheck();
       return NextResponse.json({ sent: 0 });
     }
 
@@ -70,6 +83,9 @@ export async function GET(request: Request) {
       notifyAdmins(admin, `⚠️ リマインド送信で一部失敗しました。\n${pending.length}件中${sent}件のみ送信成功。`).catch(err =>
         console.error('[cronエラー通知] エラー:', err)
       );
+      await pingHealthcheck('/fail');
+    } else {
+      await pingHealthcheck();
     }
 
     return NextResponse.json({ sent, total: pending.length });
@@ -78,6 +94,7 @@ export async function GET(request: Request) {
     notifyAdmins(admin, `🚨 リマインド送信cronでエラーが発生し、処理が中断しました。\nログを確認してください。`).catch(e =>
       console.error('[cronエラー通知] エラー:', e)
     );
+    await pingHealthcheck('/fail');
     return NextResponse.json({ error: 'internal error' }, { status: 500 });
   }
 }
